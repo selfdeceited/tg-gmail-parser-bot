@@ -36,6 +36,15 @@ See `common/structure.md` for full module map.
 - Each Telegram handler lives in its own file under `internal/telegram/` (e.g. `start.go`, `register.go`)
 - `handlers.go` contains only `RegisterHandlers` and `DefaultHandler`
 
+## Database Migrations
+
+`AutoMigrate` runs inside `db.Connect()` on every bot startup — synchronous, before the bot accepts updates.
+
+- Only **adds** columns/tables — never drops or renames
+- Renaming a struct field silently creates a new empty column; old column stays — manual `ALTER TABLE` required for renames
+- No migration history or rollback support
+- Acceptable for this project's scale; revisit if schema churn increases
+
 ## Environment Notes
 
 - Go binary is at `/opt/homebrew/bin/go` (may need `export PATH=$PATH:/opt/homebrew/bin` in non-interactive shells)
