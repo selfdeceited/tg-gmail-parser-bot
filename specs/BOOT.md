@@ -31,6 +31,11 @@ Example: `spec://common/main#stack.runtime`
 
 See `common/structure.md` for full module map.
 
+## Code Conventions
+
+- Each Telegram handler lives in its own file under `internal/telegram/` (e.g. `start.go`, `register.go`)
+- `handlers.go` contains only `RegisterHandlers` and `DefaultHandler`
+
 ## Environment Notes
 
 - Go binary is at `/opt/homebrew/bin/go` (may need `export PATH=$PATH:/opt/homebrew/bin` in non-interactive shells)
