@@ -5,21 +5,12 @@
 - Telegram bot (hosted backend)
 - Claude SDK (external API)
 
-*Scenario*
-1) Gmail --> Telegram bot // new email arrives in inbox
-2) Telegram bot -> Gmail // read new email content
-3) Telegram bot --> Claude SDK // summarize content by specified prompt, return as JSON
-4) Telegram bot --> Telegram chat // parsed summary with the letter result
+*Commands*
+ - `start` - user registers in the bot and sends /start. It registers the user and starts the installation guide telling how to set up Gmail integration. More details at `spec://config/config#start`.
+ - `/register` - This command is used to link new Gmail account for monitoring. More details at `spec://config/config#register`.
+ - `/configure` - This command is used to configure filters and prompts for summarization. It's not available if `register` command result is not successful. More details at `spec://config/config#configure`.
+ - `/watch` - This command is used to start the integration. It's not available if `register` command result is not successful or no prompts are configured. More details at `spec://config/telegram#watch`.
 
-Example:
-- User sends /start bot command in the chat and enters his gcp oauth token
-- New job feedback email arrives in Gmail inbox
-- Telegram bot reads the email content and sends it to Claude SDK for summarization
-- Claude SDK understands the following:
-  - link to the email
-  - whether the result is successful
-  - if successful, the summary for the next steps.
-- Telegram bot forwards parsed summary to configured chat to render it as a well-formatted message
 
 _Cross-cutting decisions that apply to the whole project._
 
@@ -37,7 +28,7 @@ forwards parsed job feedback email summaries back to you.
 | Language | Golang | |
 | Gmail integration | [API package](https://pkg.go.dev/google.golang.org/api/gmail/v1) | |
 | Telegram integration | [go-telegram Package](https://github.com/go-telegram/bot) | |
-| Persistence | TBD | |
+| Persistence | PostgreSQL | |
 | Deployment | Netlify | |
 
 ## Authentication {#auth}

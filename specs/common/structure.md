@@ -32,7 +32,7 @@ tg-gmail-parser-bot/
 
 ### gmail {#gmail}
 - Authenticate with Gmail API
-- Poll or receive push notifications for new emails
+- Poll for new emails
 - Fetch email content (headers + body)
 
 Specs: `specs/modules/gmail/`
@@ -58,7 +58,7 @@ Specs: `specs/modules/parser/`
 Specs: `specs/modules/parser/`
 
 ### config {#config}
-- Load and validate configuration (Gmail credentials, Telegram token, chat IDs)
+- Load and validate configuration (Gmail credentials, Telegram token, chat IDs, prompts)
 - Environment variable / file-based config
 
 Specs: `specs/modules/config/`
@@ -68,7 +68,6 @@ Specs: `specs/modules/config/`
 - `gmail` → outputs raw email data structs; knows nothing about Telegram
 - `parser` → pure transformation; no I/O
 - `telegram` → consumes formatted strings; knows nothing about Gmail
-- `config` → read-only at startup; no side effects
 
 ## Changelog {#changelog}
 
