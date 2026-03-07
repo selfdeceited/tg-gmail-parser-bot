@@ -1,5 +1,5 @@
 # Start
-1) User registers in the bot and sends /start. It starts the installation guide telling how to set up GCP OAuth token for email access. `/register`, `/watch` command is available.
+1) User registers in the bot and sends /start. It starts the installation guide telling how to set up GCP OAuth token for email access. `/register` command is available.
 
 # Register
 this command is used to link new Gmail account for monitoring.

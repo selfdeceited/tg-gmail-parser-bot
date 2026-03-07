@@ -31,6 +31,12 @@ Example: `spec://common/main#stack.runtime`
 
 See `common/structure.md` for full module map.
 
+## Environment Notes
+
+- Go binary is at `/opt/homebrew/bin/go` (may need `export PATH=$PATH:/opt/homebrew/bin` in non-interactive shells)
+- Dependencies: `github.com/go-telegram/bot`, `github.com/joho/godotenv`
+- Run `go mod tidy` after adding/removing dependencies
+
 ## Protocols
 
 - WAL maintenance: `WAL-PROTOCOL.md`
