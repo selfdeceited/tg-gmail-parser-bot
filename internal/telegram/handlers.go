@@ -11,6 +11,7 @@ import (
 func RegisterHandlers(b *tgbot.Bot, svc service.RegistrationService) {
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/start", tgbot.MatchTypeExact, StartHandler)
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(svc))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/clearregistration", tgbot.MatchTypeExact, ClearRegistrationHandler(svc))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, ConfigureButtonHandler(svc))
 	logrus.Info("handlers registered")
 }
