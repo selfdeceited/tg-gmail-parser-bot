@@ -51,8 +51,6 @@ func HandleConversation(svc service.RegistrationService) tgbot.HandlerFunc {
 		userID := update.Message.From.ID
 		s := getState(userID)
 		if s == nil {
-			logrus.WithField("user_id", userID).Warn("register: empty state detected")
-
 			return
 		}
 
@@ -133,8 +131,6 @@ func handleAuthCodePaste(ctx context.Context, b *tgbot.Bot, update *models.Updat
 		logrus.WithError(err).WithField("user_id", userID).Error("register: failed to send success message")
 	}
 }
-
-
 
 const registerGuideMessage = `*Link your Gmail account*
 

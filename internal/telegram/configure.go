@@ -32,23 +32,3 @@ func ConfigureButtonHandler(svc service.RegistrationService) tgbot.HandlerFunc {
 		sendText(ctx, b, chatID, "✅ Your Gmail account is linked and active!")
 	}
 }
-
-// clearRegistration deletes stored credentials, unmarks registration, and tells the user to re-register.
-func clearRegistration(ctx context.Context, b *tgbot.Bot, svc service.RegistrationService, userID, chatID int64) {
-	if err := svc.ClearCredentials(ctx, userID); err != nil {
-		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to clear credentials")
-	}
-	logrus.WithField("user_id", userID).Info("configure: registration cleared")
-
-	_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
-		ChatID:    chatID,
-		Text:      "❌ Your Gmail credentials are no longer valid\\. Your account has been unlinked\\.\n\nPlease run /register to reconnect\\.",
-		ParseMode: models.ParseModeMarkdown,
-		ReplyMarkup: &models.ReplyKeyboardRemove{
-			RemoveKeyboard: true,
-		},
-	})
-	if err != nil {
-		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to send cleared message")
-	}
-}
