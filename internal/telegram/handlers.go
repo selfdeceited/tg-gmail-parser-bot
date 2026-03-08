@@ -3,18 +3,19 @@ package telegram
 import (
 	tgbot "github.com/go-telegram/bot"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
+
+	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
 )
 
 // RegisterHandlers registers all bot command handlers.
-func RegisterHandlers(b *tgbot.Bot, db *gorm.DB) {
+func RegisterHandlers(b *tgbot.Bot, svc service.RegistrationService) {
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/start", tgbot.MatchTypeExact, StartHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(db))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, ConfigureButtonHandler(db))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(svc))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, ConfigureButtonHandler(svc))
 	logrus.Info("handlers registered")
 }
 
 // DefaultHandler routes non-command messages to active conversation flows.
-func DefaultHandler(db *gorm.DB) tgbot.HandlerFunc {
-	return HandleConversation(db)
+func DefaultHandler(svc service.RegistrationService) tgbot.HandlerFunc {
+	return HandleConversation(svc)
 }

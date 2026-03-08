@@ -1,16 +1,29 @@
 # Code Conventions {#conventions}
 
+## Service Layer {#service}
+
+Business logic lives in `internal/service/`, between handlers (delivery) and DB/external adapters (infrastructure).
+
+- Services are defined as **interfaces** in `internal/service/` and implemented in the same package using injected dependencies
+- Handlers accept service interfaces — never `*gorm.DB` or infrastructure types directly
+- Services call `internal/db/commands`, `internal/db/queries`, and `internal/gmail` packages
+- `main.go` constructs concrete implementations and injects them:
+  ```go
+  regSvc := service.NewRegistrationService(database)
+  telegram.RegisterHandlers(b, regSvc)
+  ```
+
 ## Telegram Handlers {#telegram}
 
 - Each command handler lives in its own file under `internal/telegram/` (e.g. `start.go`, `register.go`)
 - `handlers.go` contains only `RegisterHandlers` and `DefaultHandler` — no logic
-- Handlers that need DB access accept `*gorm.DB` and return `tgbot.HandlerFunc` (closure pattern):
+- Handlers accept a service interface and return `tgbot.HandlerFunc` (closure pattern):
   ```go
-  func RegisterHandler(db *gorm.DB) tgbot.HandlerFunc {
+  func RegisterHandler(svc service.RegistrationService) tgbot.HandlerFunc {
       return func(ctx context.Context, b *tgbot.Bot, update *models.Update) { ... }
   }
   ```
-- `DefaultHandler(db)` routes non-command messages to active conversation flows via `HandleConversation`
+- `DefaultHandler(svc)` routes non-command messages to active conversation flows via `HandleConversation`
 
 ## Multi-Step Conversation Flows {#conversations}
 

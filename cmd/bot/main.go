@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db"
+	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/telegram"
 )
 
@@ -29,17 +30,19 @@ func main() {
 		logrus.WithError(err).Fatal("failed to connect to database")
 	}
 
+	regSvc := service.NewRegistrationService(database)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	b, err := tgbot.New(token,
-		tgbot.WithDefaultHandler(telegram.DefaultHandler(database)),
+		tgbot.WithDefaultHandler(telegram.DefaultHandler(regSvc)),
 	)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to create bot")
 	}
 
-	telegram.RegisterHandlers(b, database)
+	telegram.RegisterHandlers(b, regSvc)
 
 	_, err = b.SetMyCommands(ctx, &tgbot.SetMyCommandsParams{
 		Commands: []models.BotCommand{

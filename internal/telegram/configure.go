@@ -6,18 +6,15 @@ import (
 	tgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 
-	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db/commands"
-	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db/queries"
-	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
+	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
 )
 
 // ConfigureButtonHandler handles the "⚙️ Configure" reply keyboard button press.
 // It re-verifies stored credentials with a live Gmail smoke test:
 // - valid → show registration active status
 // - invalid or missing → prompt user to run /clearregistration manually
-func ConfigureButtonHandler(db *gorm.DB) tgbot.HandlerFunc {
+func ConfigureButtonHandler(svc service.RegistrationService) tgbot.HandlerFunc {
 	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
 		if update.Message == nil || update.Message.From == nil {
 			return
@@ -25,33 +22,21 @@ func ConfigureButtonHandler(db *gorm.DB) tgbot.HandlerFunc {
 		userID := update.Message.From.ID
 		chatID := update.Message.Chat.ID
 
-		creds, err := queries.GetCredentials(db, userID)
-		if err != nil {
-			logrus.WithError(err).WithField("user_id", userID).Warn("configure: no credentials found")
-			sendText(ctx, b, chatID, "❌ Could not verify your Gmail credentials\\. Please run /clearregistration and then /register again\\.")
-			return
-		}
-
-		if err := gmail.VerifyRefreshToken(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken); err != nil {
+		if err := svc.VerifyCredentials(ctx, userID); err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Warn("configure: credential re-verification failed")
 			sendText(ctx, b, chatID, "❌ Your Gmail credentials could not be verified\\. Please run /clearregistration and then /register again\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("configure: credential re-verification passed")
-		sendText(ctx, b, chatID,
-			"✅ Your Gmail account is linked and active!",
-		)
+		sendText(ctx, b, chatID, "✅ Your Gmail account is linked and active!")
 	}
 }
 
 // clearRegistration deletes stored credentials, unmarks registration, and tells the user to re-register.
-func clearRegistration(ctx context.Context, b *tgbot.Bot, db *gorm.DB, userID, chatID int64) {
-	if err := commands.DeleteCredential(db, userID); err != nil {
-		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to delete credential")
-	}
-	if err := commands.SetRegistered(db, userID, false); err != nil {
-		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to unmark registration")
+func clearRegistration(ctx context.Context, b *tgbot.Bot, svc service.RegistrationService, userID, chatID int64) {
+	if err := svc.ClearCredentials(ctx, userID); err != nil {
+		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to clear credentials")
 	}
 	logrus.WithField("user_id", userID).Info("configure: registration cleared")
 
