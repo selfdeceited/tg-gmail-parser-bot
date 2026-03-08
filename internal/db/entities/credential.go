@@ -10,7 +10,7 @@ import (
 type Credential struct {
 	ID                    uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID                int64     `gorm:"uniqueIndex;not null"`
-	EncryptedRefreshToken string    `gorm:"type:text;not null"`
+	EncryptedCredentials string `gorm:"type:text;not null"`
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 	DeletedAt             gorm.DeletedAt `gorm:"index"`

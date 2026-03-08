@@ -28,10 +28,8 @@ forwards parsed job feedback email summaries back to you.
 | Language | Golang | |
 | Gmail integration | [API package](https://pkg.go.dev/google.golang.org/api/gmail/v1) | |
 | Telegram integration | [go-telegram Package](https://github.com/go-telegram/bot) | |
-| Persistence | PostgreSQL | |
-| Deployment | Netlify | |
-
-## Authentication {#auth}
+| Persistence | PostgreSQL hosted at [Prisma](https://console.prisma.io/cmmgj2po605hrx2cxf1fz0xvs/overview) | |
+| Deployment | Render, GitHub Actions | |
 
 ### Gmail {#auth.gmail}
 > use user OAuth flow from GCP

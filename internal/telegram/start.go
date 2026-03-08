@@ -2,10 +2,10 @@ package telegram
 
 import (
 	"context"
-	"log"
 
 	tgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/sirupsen/logrus"
 )
 
 // StartHandler responds to /start with the GCP OAuth setup guide.
@@ -13,14 +13,19 @@ func StartHandler(ctx context.Context, b *tgbot.Bot, update *models.Update) {
 	if update.Message == nil {
 		return
 	}
+
+	logrus.WithField("user_id", update.Message.From.ID).Info("StartHandler: start")
+
 	_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
 		Text:      startMessage,
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
-		log.Printf("StartHandler: failed to send message: %v", err)
+		logrus.WithError(err).Error("StartHandler: failed to send message")
 	}
+
+	logrus.WithField("user_id", update.Message.From.ID).Info("StartHandler: completed")
 }
 
 // <!-- REVIEW: spec://common/main#formatting says "Markdown parse mode" but

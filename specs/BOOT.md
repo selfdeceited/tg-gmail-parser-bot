@@ -9,7 +9,8 @@
 2. Read `WAL.md` — continuation state and what to do next
 3. Read `common/main.md` — architecture, stack, key decisions
 4. Read `common/structure.md` — module map
-5. Read relevant module specs before working on a module
+5. Read `common/conventions.md` — code conventions
+6. Read relevant module specs before working on a module
 
 ## Spec URI Scheme
 
@@ -33,22 +34,11 @@ See `common/structure.md` for full module map.
 
 ## Code Conventions
 
-- Each Telegram handler lives in its own file under `internal/telegram/` (e.g. `start.go`, `register.go`)
-- `handlers.go` contains only `RegisterHandlers` and `DefaultHandler`
-
-## Database Migrations
-
-`AutoMigrate` runs inside `db.Connect()` on every bot startup — synchronous, before the bot accepts updates.
-
-- Only **adds** columns/tables — never drops or renames
-- Renaming a struct field silently creates a new empty column; old column stays — manual `ALTER TABLE` required for renames
-- No migration history or rollback support
-- Acceptable for this project's scale; revisit if schema churn increases
+See `common/conventions.md` — handler patterns, conversation state, Markdown formatting, DB layer, env vars, Gmail OAuth.
 
 ## Environment Notes
 
 - Go binary is at `/opt/homebrew/bin/go` (may need `export PATH=$PATH:/opt/homebrew/bin` in non-interactive shells)
-- Dependencies: `github.com/go-telegram/bot`, `github.com/joho/godotenv`
 - Run `go mod tidy` after adding/removing dependencies
 
 ## Protocols
