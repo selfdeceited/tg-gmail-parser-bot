@@ -15,7 +15,7 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 
 ## Telegram Handlers {#telegram}
 
-- Each command handler lives in its own file under `internal/telegram/` (e.g. `start.go`, `register.go`)
+- Each command handler lives in its own file under `internal/telegram/`, named `<command>_handler.go` (e.g. `start_handler.go`, `register_handler.go`)
 - `handlers.go` contains only `RegisterHandlers` and `DefaultHandler` — no logic
 - Handlers accept a service interface and return `tgbot.HandlerFunc` (closure pattern):
   ```go
