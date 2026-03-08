@@ -27,7 +27,7 @@ func UpsertCredentials(db *gorm.DB, userID int64, clientID, clientSecret, refres
 	if err != nil {
 		return fmt.Errorf("failed to marshal credentials: %w", err)
 	}
-	encrypted, err := internaldb.EncryptToken(string(data))
+	encrypted, err := internaldb.EncryptCredentials(string(data), userID)
 	if err != nil {
 		return err
 	}

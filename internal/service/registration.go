@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
+	internaldb "github.com/selfdeceited/tg-gmail-parser-bot/internal/db"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db/commands"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db/queries"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
@@ -18,6 +21,9 @@ type RegistrationService interface {
 	VerifyCredentials(ctx context.Context, userID int64) error
 	// ClearCredentials deletes stored credentials and marks the user as unregistered.
 	ClearCredentials(ctx context.Context, userID int64) error
+	// RotateCredentials re-encrypts all stored credentials with the current key version.
+	// Call this after bumping TOKEN_ENCRYPTION_KEY_CURRENT to migrate existing rows.
+	RotateCredentials(ctx context.Context) (rotated int, err error)
 }
 
 type registrationService struct {
@@ -49,4 +55,31 @@ func (s *registrationService) ClearCredentials(ctx context.Context, userID int64
 		return err
 	}
 	return commands.SetRegistered(s.db, userID, false)
+}
+
+func (s *registrationService) RotateCredentials(ctx context.Context) (int, error) {
+	rows, err := queries.ListAllCredentials(s.db)
+	if err != nil {
+		return 0, fmt.Errorf("failed to list credentials: %w", err)
+	}
+	rotated := 0
+	for _, cred := range rows {
+		plaintext, err := internaldb.DecryptCredentials(cred.EncryptedCredentials, cred.UserID)
+		if err != nil {
+			logrus.WithError(err).WithField("user_id", cred.UserID).Error("rotate: failed to decrypt credentials")
+			continue
+		}
+		reencrypted, err := internaldb.EncryptCredentials(plaintext, cred.UserID)
+		if err != nil {
+			logrus.WithError(err).WithField("user_id", cred.UserID).Error("rotate: failed to re-encrypt credentials")
+			continue
+		}
+		if err := s.db.Model(&cred).Update("encrypted_credentials", reencrypted).Error; err != nil {
+			logrus.WithError(err).WithField("user_id", cred.UserID).Error("rotate: failed to save rotated credentials")
+			continue
+		}
+		rotated++
+		logrus.WithField("user_id", cred.UserID).Info("rotate: credentials re-encrypted with current key version")
+	}
+	return rotated, nil
 }

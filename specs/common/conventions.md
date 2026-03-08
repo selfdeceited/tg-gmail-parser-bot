@@ -45,7 +45,7 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 - `internal/db/entities/` — GORM model structs only
 - `internal/db/commands/` — write operations (INSERT, UPDATE, DELETE)
 - `internal/db/queries/` — read operations (SELECT)
-- `internal/db/crypto.go` — `EncryptToken` / `DecryptToken` (AES-256-GCM)
+- `internal/db/crypto.go` — `EncryptCredentials` / `DecryptCredentials` (AES-256-GCM)
 
 ### Migrations
 - `AutoMigrate` runs inside `db.Connect()` on every startup — synchronous, before the bot accepts updates
@@ -59,7 +59,11 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | yes | Bot token from @BotFather |
 | `DATABASE_URL` | yes | PostgreSQL connection string |
-| `TOKEN_ENCRYPTION_KEY` | yes | Base64-encoded 32-byte key — generate with `openssl rand -base64 32` |
+| `TOKEN_ENCRYPTION_KEY_<N>` | yes* | Base64-encoded 32-byte key for version N — generate with `openssl rand -base64 32` |
+| `TOKEN_ENCRYPTION_KEY_CURRENT` | yes* | Integer — which version to use for new encryptions (e.g. `1`) |
+| `TOKEN_ENCRYPTION_KEY` | legacy | Single-key fallback, treated as version 1 — no rotation support |
+
+\* Use the versioned form (`TOKEN_ENCRYPTION_KEY_<N>` + `TOKEN_ENCRYPTION_KEY_CURRENT`) for all new deployments. To rotate: add `TOKEN_ENCRYPTION_KEY_<N+1>`, bump `CURRENT`, then call `RegistrationService.RotateCredentials`.
 
 ## Logging {#logging}
 
@@ -81,4 +85,4 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 - Desktop app OOB redirect: `urn:ietf:wg:oauth:2.0:oob` — user copies code from browser page
 - Always use `oauth2.AccessTypeOffline` + `oauth2.ApprovalForce` to guarantee a refresh token is returned
 - Smoke test (read last message) is run before saving any credentials
-- Refresh token is AES-256-GCM encrypted before persistence via `EncryptToken`
+- Refresh token is AES-256-GCM encrypted before persistence via `EncryptCredentials`
