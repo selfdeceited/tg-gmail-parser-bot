@@ -30,7 +30,10 @@ We'll use GORM's built-in `AutoMigrate` (code-first).
 3. `Credentials` table
   - `id` (UUID, primary key)
   - `user_id` (int64, foreign key → Users.id) — one credential per user
-  - `encrypted_refresh_token` (text) — AES-256-GCM encrypted, format: `<base64(nonce)>.<base64(ciphertext)>`
+  - `encrypted_credentials` (text) — AES-256-GCM encrypted, format: `<base64(nonce)>.<base64(ciphertext)>`. Inside:
+    - `client_id` (text) — OAuth client ID
+    - `client_secret` (text) — OAuth client secret
+    - `refresh_token` (text) — OAuth refresh token
   - `created_at`, `updated_at`, `deleted_at` — via `gorm.Model` fields
 
 ### Indexes

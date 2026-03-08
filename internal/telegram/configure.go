@@ -16,7 +16,7 @@ import (
 // ConfigureButtonHandler handles the "⚙️ Configure" reply keyboard button press.
 // It re-verifies stored credentials with a live Gmail smoke test:
 // - valid → show registration active status
-// - invalid or missing → clear registration, prompt re-register
+// - invalid or missing → prompt user to run /clearregistration manually
 func ConfigureButtonHandler(db *gorm.DB) tgbot.HandlerFunc {
 	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
 		if update.Message == nil || update.Message.From == nil {
@@ -27,22 +27,20 @@ func ConfigureButtonHandler(db *gorm.DB) tgbot.HandlerFunc {
 
 		creds, err := queries.GetCredentials(db, userID)
 		if err != nil {
-			logrus.WithError(err).WithField("user_id", userID).Warn("configure: no credentials found — clearing registration")
-			clearRegistration(ctx, b, db, userID, chatID)
+			logrus.WithError(err).WithField("user_id", userID).Warn("configure: no credentials found")
+			sendText(ctx, b, chatID, "❌ Could not verify your Gmail credentials\\. Please run /clearregistration and then /register again\\.")
 			return
 		}
 
 		if err := gmail.VerifyRefreshToken(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken); err != nil {
-			logrus.WithError(err).WithField("user_id", userID).Warn("configure: credential re-verification failed — clearing")
-			clearRegistration(ctx, b, db, userID, chatID)
+			logrus.WithError(err).WithField("user_id", userID).Warn("configure: credential re-verification failed")
+			sendText(ctx, b, chatID, "❌ Your Gmail credentials could not be verified\\. Please run /clearregistration and then /register again\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("configure: credential re-verification passed")
 		sendText(ctx, b, chatID,
-			"✅ Your Gmail account is linked and active\\.\n\n"+
-				"Use /configure to manage your email monitoring settings\\.\n"+
-				"To unlink your account, use /clearregistration\\.",
+			"✅ Your Gmail account is linked and active!",
 		)
 	}
 }
