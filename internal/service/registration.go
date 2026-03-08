@@ -21,6 +21,8 @@ type RegistrationService interface {
 	VerifyCredentials(ctx context.Context, userID int64) error
 	// ClearCredentials deletes stored credentials and marks the user as unregistered.
 	ClearCredentials(ctx context.Context, userID int64) error
+	// IsRegistered returns true if the user has completed registration.
+	IsRegistered(ctx context.Context, userID int64) (bool, error)
 	// RotateCredentials re-encrypts all stored credentials with the current key version.
 	// Call this after bumping TOKEN_ENCRYPTION_KEY_CURRENT to migrate existing rows.
 	RotateCredentials(ctx context.Context) (rotated int, err error)
@@ -50,6 +52,14 @@ func (s *registrationService) VerifyCredentials(ctx context.Context, userID int6
 	return gmail.VerifyRefreshToken(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
 }
 
+func (s *registrationService) IsRegistered(_ context.Context, userID int64) (bool, error) {
+	user, err := queries.GetUser(s.db, userID)
+	if err != nil {
+		return false, nil // user not found → not registered
+	}
+	return user.IsRegistered, nil
+}
+
 func (s *registrationService) ClearCredentials(ctx context.Context, userID int64) error {
 	if err := commands.DeleteCredential(s.db, userID); err != nil {
 		return err
@@ -58,6 +68,7 @@ func (s *registrationService) ClearCredentials(ctx context.Context, userID int64
 }
 
 func (s *registrationService) RotateCredentials(ctx context.Context) (int, error) {
+	// todo: consider pagination on larger datasets
 	rows, err := queries.ListAllCredentials(s.db)
 	if err != nil {
 		return 0, fmt.Errorf("failed to list credentials: %w", err)

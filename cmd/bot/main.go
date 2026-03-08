@@ -31,23 +31,27 @@ func main() {
 	}
 
 	regSvc := service.NewRegistrationService(database)
+	promptSvc := service.NewPromptService(database)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	b, err := tgbot.New(token,
-		tgbot.WithDefaultHandler(telegram.DefaultHandler(regSvc)),
+		tgbot.WithDefaultHandler(telegram.DefaultHandler(regSvc, promptSvc)),
 	)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to create bot")
 	}
 
-	telegram.RegisterHandlers(b, regSvc)
+	telegram.RegisterHandlers(b, regSvc, promptSvc)
 
 	_, err = b.SetMyCommands(ctx, &tgbot.SetMyCommandsParams{
 		Commands: []models.BotCommand{
 			{Command: "start", Description: "Start the bot and see the setup guide"},
 			{Command: "register", Description: "Link a Gmail account for monitoring"},
+			{Command: "clearregistration", Description: "Unlink Gmail account and clear credentials"},
+			{Command: "configure", Description: "Manage summarization prompts"},
+			{Command: "addprompt", Description: "Add or edit a summarization prompt"},
 		},
 	})
 	if err != nil {

@@ -3,6 +3,7 @@ package telegram
 import (
 	"sync"
 
+	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 )
 
@@ -36,5 +37,41 @@ func setState(userID int64, s *registerState) {
 		delete(registerStates, userID)
 	} else {
 		registerStates[userID] = s
+	}
+}
+
+// addPrompt conversation state
+
+type addPromptStep int
+
+const (
+	stepAddPromptWaitFilter addPromptStep = iota
+	stepAddPromptWaitPrompt
+)
+
+type addPromptState struct {
+	step   addPromptStep
+	editID *uuid.UUID // nil = new prompt; non-nil = editing existing
+	filter string     // accumulated from step 1
+}
+
+var (
+	addPromptMu     sync.Mutex
+	addPromptStates = map[int64]*addPromptState{}
+)
+
+func getAddPromptState(userID int64) *addPromptState {
+	addPromptMu.Lock()
+	defer addPromptMu.Unlock()
+	return addPromptStates[userID]
+}
+
+func setAddPromptState(userID int64, s *addPromptState) {
+	addPromptMu.Lock()
+	defer addPromptMu.Unlock()
+	if s == nil {
+		delete(addPromptStates, userID)
+	} else {
+		addPromptStates[userID] = s
 	}
 }

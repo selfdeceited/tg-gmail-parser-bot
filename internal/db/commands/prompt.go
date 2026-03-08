@@ -15,6 +15,13 @@ func AddPrompt(db *gorm.DB, userID int64, prompt, filter string) error {
 	return db.Create(&p).Error
 }
 
+func UpdatePrompt(db *gorm.DB, id uuid.UUID, prompt, filter string) error {
+	return db.Model(&entities.Prompt{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"prompt": prompt,
+		"filter": filter,
+	}).Error
+}
+
 func DeletePrompt(db *gorm.DB, id uuid.UUID) error {
 	return db.Delete(&entities.Prompt{}, id).Error
 }
