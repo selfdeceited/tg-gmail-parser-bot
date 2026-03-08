@@ -17,7 +17,7 @@ func RegisterHandlers(b *tgbot.Bot, regSvc service.RegistrationService, promptSv
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/clearregistration", tgbot.MatchTypeExact, ClearRegistrationHandler(regSvc))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureCommandHandler(promptSvc)))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/addprompt", tgbot.MatchTypeExact, requireRegistered(regSvc, AddPromptHandler(promptSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureButtonHandler(regSvc)))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureCommandHandler(promptSvc)))
 
 	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "edit:", tgbot.MatchTypePrefix, requireRegisteredCB(regSvc, EditPromptCallback(promptSvc)))
 	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "remove:", tgbot.MatchTypePrefix, requireRegisteredCB(regSvc, RemovePromptCallback(promptSvc)))
