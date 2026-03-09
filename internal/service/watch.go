@@ -16,7 +16,7 @@ import (
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
 )
 
-const pollInterval = 300 * time.Second
+const pollInterval = 20 * time.Second
 
 // SendFunc delivers a formatted message to a Telegram chat.
 type SendFunc func(chatID int64, msg string)
@@ -38,8 +38,8 @@ type watchService struct {
 	db     *gorm.DB
 	claude *claude.Client
 
-	mu       sync.Mutex
-	cancels  map[int64]context.CancelFunc
+	mu      sync.Mutex
+	cancels map[int64]context.CancelFunc
 }
 
 // NewWatchService returns a WatchService backed by the given DB and Claude client.
@@ -99,6 +99,7 @@ func (s *watchService) RestoreAll(ctx context.Context, send SendFunc) error {
 	if err != nil {
 		return err
 	}
+	// consider in-db pagination for larger datasets
 	for _, u := range users {
 		if err := s.Start(ctx, u.ID, u.WatchChatID, send); err != nil {
 			logrus.WithError(err).WithField("user_id", u.ID).Error("watch: failed to restore watcher on startup")
@@ -223,5 +224,5 @@ func selectPrompts(email gmail.EmailMessage, prompts []entities.Prompt) []entiti
 }
 
 func formatSummary(r *claude.SummarizeResult) string {
-	return "📧 *" + r.Title + "*\n\n" + r.Content
+	return "📧 *" + r.Title + "*\n\n" + r.ContentString()
 }

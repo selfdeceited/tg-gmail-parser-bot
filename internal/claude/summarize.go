@@ -16,10 +16,32 @@ import (
 const model = anthropic.ModelClaudeHaiku4_5_20251001
 
 // SummarizeResult holds the structured response from Claude.
+// Content is RawMessage to tolerate Claude returning either a plain string
+// or a nested object; use ContentString() to get a displayable value.
 type SummarizeResult struct {
-	Result  string `json:"result"`  // "matched" | "not matched"
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Result  string          `json:"result"` // "matched" | "not matched"
+	Title   string          `json:"title"`
+	Content json.RawMessage `json:"content"`
+}
+
+// ContentString returns content as a plain string regardless of whether
+// Claude returned a JSON string or a JSON object.
+func (r *SummarizeResult) ContentString() string {
+	if len(r.Content) == 0 {
+		return ""
+	}
+	// Try to unquote a JSON string first.
+	var s string
+	if err := json.Unmarshal(r.Content, &s); err == nil {
+		return s
+	}
+	// Fall back to pretty-printed JSON for objects/arrays.
+	var v any
+	if err := json.Unmarshal(r.Content, &v); err == nil {
+		b, _ := json.MarshalIndent(v, "", "  ")
+		return string(b)
+	}
+	return string(r.Content)
 }
 
 // Client wraps the Anthropic SDK for email summarization.
@@ -93,8 +115,8 @@ Email body:
 
 Respond with ONLY valid JSON — no markdown, no code fences, no extra text. The JSON must have exactly these fields:
 - result: "matched" or "not matched"
-- title: email subject/title
-- content: summary of the email content per the prompt criteria`,
+- title: email subject/title (plain string)
+- content: a plain text summary string of the email content per the prompt criteria — must be a JSON string, not an object`,
 		userPrompt,
 		email.Subject,
 		email.From,
