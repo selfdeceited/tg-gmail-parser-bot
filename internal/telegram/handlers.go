@@ -11,29 +11,29 @@ import (
 )
 
 // RegisterHandlers registers all bot command and callback handlers.
-func RegisterHandlers(b *tgbot.Bot, regSvc service.RegistrationService, promptSvc service.PromptService, watchSvc service.WatchService) {
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/start", tgbot.MatchTypeExact, StartHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(regSvc))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/clearregistration", tgbot.MatchTypeExact, ClearRegistrationHandler(regSvc))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureCommandHandler(promptSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/addprompt", tgbot.MatchTypeExact, requireRegistered(regSvc, AddPromptHandler(promptSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/watch", tgbot.MatchTypeExact, requireRegistered(regSvc, WatchHandler(watchSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureCommandHandler(promptSvc)))
+func RegisterHandlers(bot *tgbot.Bot, registrationService service.RegistrationService, promptService service.PromptService, watchService service.WatchService) {
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/start", tgbot.MatchTypeExact, StartHandler)
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(registrationService))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/clearregistration", tgbot.MatchTypeExact, ClearRegistrationHandler(registrationService))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/configure", tgbot.MatchTypeExact, requireRegistered(registrationService, ConfigureCommandHandler(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/addprompt", tgbot.MatchTypeExact, requireRegistered(registrationService, AddPromptHandler(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/watch", tgbot.MatchTypeExact, requireRegistered(registrationService, WatchHandler(watchService)))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(registrationService, ConfigureCommandHandler(promptService)))
 
-	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "edit:", tgbot.MatchTypePrefix, requireRegisteredCB(regSvc, EditPromptCallback(promptSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "remove:", tgbot.MatchTypePrefix, requireRegisteredCB(regSvc, RemovePromptCallback(promptSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "addprompt:new", tgbot.MatchTypeExact, requireRegisteredCB(regSvc, AddPromptNewCallback(promptSvc)))
-	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "addprompt:nofilter", tgbot.MatchTypeExact, requireRegisteredCB(regSvc, AddPromptNoFilterCallback(promptSvc)))
+	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "edit:", tgbot.MatchTypePrefix, requireRegisteredCB(registrationService, EditPromptCallback(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "remove:", tgbot.MatchTypePrefix, requireRegisteredCB(registrationService, RemovePromptCallback(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "addprompt:new", tgbot.MatchTypeExact, requireRegisteredCB(registrationService, AddPromptNewCallback(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "addprompt:nofilter", tgbot.MatchTypeExact, requireRegisteredCB(registrationService, AddPromptNoFilterCallback(promptService)))
 
 	logrus.Info("handlers registered")
 }
 
 // DefaultHandler routes non-command messages to active conversation flows.
-func DefaultHandler(regSvc service.RegistrationService, promptSvc service.PromptService) tgbot.HandlerFunc {
-	registerConv := HandleConversation(regSvc)
-	addPromptConv := HandleAddPromptConversation(promptSvc)
-	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
-		registerConv(ctx, b, update)
-		addPromptConv(ctx, b, update)
+func DefaultHandler(registrationService service.RegistrationService, promptService service.PromptService) tgbot.HandlerFunc {
+	registerConv := HandleConversation(registrationService)
+	addPromptConv := HandleAddPromptConversation(promptService)
+	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
+		registerConv(ctx, bot, update)
+		addPromptConv(ctx, bot, update)
 	}
 }

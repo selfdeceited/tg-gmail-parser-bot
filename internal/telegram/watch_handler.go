@@ -11,38 +11,38 @@ import (
 )
 
 // WatchHandler handles the /watch command (toggle: start or stop Gmail monitoring).
-func WatchHandler(watchSvc service.WatchService) tgbot.HandlerFunc {
-	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
+func WatchHandler(watchService service.WatchService) tgbot.HandlerFunc {
+	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.Message == nil {
 			return
 		}
 		userID := update.Message.From.ID
 		chatID := update.Message.Chat.ID
 
-		if watchSvc.IsWatching(userID) {
-			watchSvc.Stop(userID)
+		if watchService.IsWatching(userID) {
+			watchService.Stop(userID)
 			logrus.WithField("user_id", userID).Info("watch: user stopped watching")
-			sendText(ctx, b, chatID, "🔴 Gmail monitoring stopped\\.")
+			sendText(ctx, bot, chatID, "🔴 Gmail monitoring stopped\\.")
 			return
 		}
 
-		send := MakeBotSendFunc(ctx, b)
-		if err := watchSvc.Start(ctx, userID, chatID, send); err != nil {
+		send := MakeBotSendFunc(ctx, bot)
+		if err := watchService.Start(ctx, userID, chatID, send); err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("watch: failed to start")
-			sendText(ctx, b, chatID, "❌ Failed to start monitoring\\. Please try again\\.")
+			sendText(ctx, bot, chatID, "❌ Failed to start monitoring\\. Please try again\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("watch: user started watching")
-		sendText(ctx, b, chatID, "🟢 Gmail monitoring started\\. You'll be notified when matching emails arrive\\.")
+		sendText(ctx, bot, chatID, "🟢 Gmail monitoring started\\. You'll be notified when matching emails arrive\\.")
 	}
 }
 
 // MakeBotSendFunc returns a SendFunc that delivers messages via the given bot instance.
 // Exported so main.go can pass it to WatchService.RestoreAll on startup.
-func MakeBotSendFunc(ctx context.Context, b *tgbot.Bot) service.SendFunc {
+func MakeBotSendFunc(ctx context.Context, bot *tgbot.Bot) service.SendFunc {
 	return func(chatID int64, msg string) {
-		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
+		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
 			Text:      msg,
 			ParseMode: models.ParseModeHTML,

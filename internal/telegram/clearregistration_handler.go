@@ -12,7 +12,7 @@ import (
 
 // ClearRegistrationHandler handles /clearregistration — wipes stored credentials and re-shows the setup guide.
 func ClearRegistrationHandler(svc service.RegistrationService) tgbot.HandlerFunc {
-	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
+	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.Message == nil {
 			return
 		}
@@ -22,15 +22,15 @@ func ClearRegistrationHandler(svc service.RegistrationService) tgbot.HandlerFunc
 
 		if err := svc.ClearCredentials(ctx, userID); err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("ClearRegistrationHandler: failed to clear credentials")
-			sendText(ctx, b, chatID, "Failed to clear registration data\\. Please try again later\\.")
+			sendText(ctx, bot, chatID, "Failed to clear registration data\\. Please try again later\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("ClearRegistrationHandler: credentials cleared")
-		sendText(ctx, b, chatID, "Registration cleared\\. Your Gmail credentials have been deleted\\.")
+		sendText(ctx, bot, chatID, "Registration cleared\\. Your Gmail credentials have been deleted\\.")
 
 		// Re-show the setup guide so the user knows how to register again.
-		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
+		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
 			Text:      startMessage,
 			ParseMode: models.ParseModeMarkdown,

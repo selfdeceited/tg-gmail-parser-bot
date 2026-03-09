@@ -13,28 +13,28 @@ import (
 
 // ConfigureCommandHandler handles /configure — lists the user's prompts with inline Edit/Remove buttons.
 func ConfigureCommandHandler(svc service.PromptService) tgbot.HandlerFunc {
-	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
+	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.Message == nil {
 			return
 		}
 		userID := update.Message.From.ID
 		chatID := update.Message.Chat.ID
-		sendPromptList(ctx, b, svc, userID, chatID)
+		sendPromptList(ctx, bot, svc, userID, chatID)
 	}
 }
 
 // sendPromptList fetches and displays the current prompt list for a user.
 // Shared by ConfigureCommandHandler and post-edit/delete refresh.
-func sendPromptList(ctx context.Context, b *tgbot.Bot, svc service.PromptService, userID, chatID int64) {
+func sendPromptList(ctx context.Context, bot *tgbot.Bot, svc service.PromptService, userID, chatID int64) {
 	prompts, err := svc.ListPrompts(ctx, userID)
 	if err != nil {
 		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to list prompts")
-		sendText(ctx, b, chatID, "Failed to load prompts\\. Please try again\\.")
+		sendText(ctx, bot, chatID, "Failed to load prompts\\. Please try again\\.")
 		return
 	}
 
 	if len(prompts) == 0 {
-		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
+		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
 			Text:      "You have no prompts yet\\. Use /addprompt to add one\\.",
 			ParseMode: models.ParseModeMarkdown,
@@ -57,7 +57,7 @@ func sendPromptList(ctx context.Context, b *tgbot.Bot, svc service.PromptService
 		}
 		text := fmt.Sprintf("📌 *Filter:* %s\n💬 %s", filterLine, escapeMarkdown(p.Prompt))
 		idStr := p.ID.String()
-		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
+		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
 			Text:      text,
 			ParseMode: models.ParseModeMarkdown,
@@ -75,7 +75,7 @@ func sendPromptList(ctx context.Context, b *tgbot.Bot, svc service.PromptService
 		}
 	}
 
-	_, err = b.SendMessage(ctx, &tgbot.SendMessageParams{
+	_, err = bot.SendMessage(ctx, &tgbot.SendMessageParams{
 		ChatID:    chatID,
 		Text:      "Your prompts are listed above\\.",
 		ParseMode: models.ParseModeMarkdown,

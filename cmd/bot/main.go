@@ -27,29 +27,29 @@ func main() {
 		logrus.WithError(err).Fatal("failed to connect to database")
 	}
 
-	regSvc := service.NewRegistrationService(database)
-	promptSvc := service.NewPromptService(database)
+	registrationService := service.NewRegistrationService(database)
+	promptService := service.NewPromptService(database)
 	claudeClient := claude.NewClient(claudeAPIKey)
-	watchSvc := service.NewWatchService(database, claudeClient)
+	watchService := service.NewWatchService(database, claudeClient)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	b, err := tgbot.New(token,
-		tgbot.WithDefaultHandler(telegram.DefaultHandler(regSvc, promptSvc)),
+	bot, err := tgbot.New(token,
+		tgbot.WithDefaultHandler(telegram.DefaultHandler(registrationService, promptService)),
 	)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to create bot")
 	}
 
-	telegram.RegisterHandlers(b, regSvc, promptSvc, watchSvc)
+	telegram.RegisterHandlers(bot, registrationService, promptService, watchService)
 
 	// Resume watchers for users who had monitoring active before the restart.
-	if err := watchSvc.RestoreAll(ctx, telegram.MakeBotSendFunc(ctx, b)); err != nil {
+	if err := watchService.RestoreAll(ctx, telegram.MakeBotSendFunc(ctx, bot)); err != nil {
 		logrus.WithError(err).Warn("failed to restore watchers from DB")
 	}
 
-	_, err = b.SetMyCommands(ctx, &tgbot.SetMyCommandsParams{
+	_, err = bot.SetMyCommands(ctx, &tgbot.SetMyCommandsParams{
 		Commands: []models.BotCommand{
 			{Command: "start", Description: "Start the bot and see the setup guide"},
 			{Command: "register", Description: "Link a Gmail account for monitoring"},
@@ -64,5 +64,5 @@ func main() {
 	}
 
 	logrus.Info("bot started, waiting for updates...")
-	b.Start(ctx)
+	bot.Start(ctx)
 }

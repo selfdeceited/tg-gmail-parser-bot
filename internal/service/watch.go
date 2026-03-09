@@ -154,13 +154,13 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 		return err
 	}
 
-	gmailSvc, err := gmail.NewGmailService(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
+	gmailService, err := gmail.NewGmailService(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to create gmail service")
 		return err
 	}
 
-	emails, err := gmail.FetchNewMessages(ctx, gmailSvc, since)
+	emails, err := gmail.FetchNewMessages(ctx, gmailService, since)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to fetch messages")
 		return err

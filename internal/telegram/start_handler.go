@@ -9,14 +9,14 @@ import (
 )
 
 // StartHandler responds to /start with the GCP OAuth setup guide.
-func StartHandler(ctx context.Context, b *tgbot.Bot, update *models.Update) {
+func StartHandler(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 	if update.Message == nil {
 		return
 	}
 
 	logrus.WithField("user_id", update.Message.From.ID).Info("StartHandler: start")
 
-	_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
+	_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
 		Text:      startMessage,
 		ParseMode: models.ParseModeMarkdown,

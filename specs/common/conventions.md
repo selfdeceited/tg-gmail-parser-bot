@@ -9,9 +9,11 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 - Services call `internal/db/commands`, `internal/db/queries`, and `internal/gmail` packages
 - `main.go` constructs concrete implementations and injects them:
   ```go
-  regSvc := service.NewRegistrationService(database)
-  telegram.RegisterHandlers(b, regSvc)
+  registrationService := service.NewRegistrationService(database)
+  telegram.RegisterHandlers(b, registrationService)
   ```
+- Variable names use the full service name — never abbreviated suffixes like `regSvc`, `promptSvc`. Use `registrationService`, `promptService`, `watchService`.
+- Avoid single-letter variable names. Use descriptive names: `bot` instead of `b`, `gmailService` instead of `svc`, etc.
 
 ## Telegram Handlers {#telegram}
 

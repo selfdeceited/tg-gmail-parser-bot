@@ -51,14 +51,14 @@ type Client struct {
 
 // NewClient creates a Client using the provided API key.
 func NewClient(apiKey string) *Client {
-	c := anthropic.NewClient(option.WithAPIKey(apiKey))
-	return &Client{inner: &c}
+	innerClient := anthropic.NewClient(option.WithAPIKey(apiKey))
+	return &Client{inner: &innerClient}
 }
 
 // Summarize sends the email through Claude using the augmented prompt and
 // returns a structured result. Returns an error if the API call fails or
 // the response cannot be parsed.
-func (c *Client) Summarize(ctx context.Context, userPrompt string, email gmail.EmailMessage) (*SummarizeResult, error) {
+func (client *Client) Summarize(ctx context.Context, userPrompt string, email gmail.EmailMessage) (*SummarizeResult, error) {
 	augmented := buildPrompt(userPrompt, email)
 
 	logrus.WithFields(logrus.Fields{
@@ -67,7 +67,7 @@ func (c *Client) Summarize(ctx context.Context, userPrompt string, email gmail.E
 		"from":       email.From,
 	}).Info("claude: sending message for summarization")
 
-	msg, err := c.inner.Messages.New(ctx, anthropic.MessageNewParams{
+	msg, err := client.inner.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     model,
 		MaxTokens: 1024,
 		Messages: []anthropic.MessageParam{
@@ -125,16 +125,16 @@ Respond with ONLY valid JSON — no markdown, no code fences, no extra text. The
 }
 
 // stripCodeFence removes optional ```json ... ``` or ``` ... ``` wrapping from Claude responses.
-func stripCodeFence(s string) string {
-	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "```") {
-		s = s[3:]
-		if strings.HasPrefix(s, "json") {
-			s = s[4:]
+func stripCodeFence(text string) string {
+	text = strings.TrimSpace(text)
+	if strings.HasPrefix(text, "```") {
+		text = text[3:]
+		if strings.HasPrefix(text, "json") {
+			text = text[4:]
 		}
-		if idx := strings.LastIndex(s, "```"); idx != -1 {
-			s = s[:idx]
+		if idx := strings.LastIndex(text, "```"); idx != -1 {
+			text = text[:idx]
 		}
 	}
-	return strings.TrimSpace(s)
+	return strings.TrimSpace(text)
 }
