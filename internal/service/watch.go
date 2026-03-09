@@ -17,7 +17,7 @@ import (
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
 )
 
-const pollInterval = 20 * time.Second
+const pollInterval = 120 * time.Second
 
 // SendFunc delivers a formatted message to a Telegram chat.
 type SendFunc func(chatID int64, msg string)
