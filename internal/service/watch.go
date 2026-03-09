@@ -202,7 +202,7 @@ func (s *watchService) processEmail(ctx context.Context, userID int64, chatID in
 
 		if strings.EqualFold(result.Result, "matched") {
 			log.WithField("prompt_id", p.ID).Info("watch: email matched, sending to chat")
-			send(chatID, formatSummary(result))
+			send(chatID, formatSummary(result, email.URL))
 			return
 		}
 
@@ -228,6 +228,8 @@ func selectPrompts(email gmail.EmailMessage, prompts []entities.Prompt) []entiti
 	return prompts
 }
 
-func formatSummary(r *claude.SummarizeResult) string {
-	return "📧 <b>" + html.EscapeString(r.Title) + "</b>\n\n" + html.EscapeString(r.ContentString())
+func formatSummary(r *claude.SummarizeResult, url string) string {
+	return "📧 <b>" + html.EscapeString(r.Title) + "</b>\n\n" +
+		html.EscapeString(r.ContentString()) +
+		"\n\n<a href=\"" + url + "\">Open in Gmail</a>"
 }

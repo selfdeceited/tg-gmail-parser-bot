@@ -20,6 +20,7 @@ type EmailMessage struct {
 	Subject string
 	From    string
 	Body    string
+	URL     string
 }
 
 // NewGmailService builds an authenticated Gmail API service from stored credentials.
@@ -76,6 +77,7 @@ func FetchNewMessages(ctx context.Context, svc *gmailapi.Service, since time.Tim
 func parseMessage(msg *gmailapi.Message) EmailMessage {
 	email := EmailMessage{
 		ID:   msg.Id,
+		URL:  "https://mail.google.com/mail/u/0/#all/" + msg.Id,
 		Body: msg.Snippet,
 	}
 
