@@ -26,22 +26,22 @@ type SummarizeResult struct {
 
 // ContentString returns content as a plain string regardless of whether
 // Claude returned a JSON string or a JSON object.
-func (r *SummarizeResult) ContentString() string {
-	if len(r.Content) == 0 {
+func (summarizeResult *SummarizeResult) ContentString() string {
+	if len(summarizeResult.Content) == 0 {
 		return ""
 	}
 	// Try to unquote a JSON string first.
-	var s string
-	if err := json.Unmarshal(r.Content, &s); err == nil {
-		return s
+	var serializedResult string
+	if err := json.Unmarshal(summarizeResult.Content, &serializedResult); err == nil {
+		return serializedResult
 	}
 	// Fall back to pretty-printed JSON for objects/arrays.
-	var v any
-	if err := json.Unmarshal(r.Content, &v); err == nil {
-		b, _ := json.MarshalIndent(v, "", "  ")
-		return string(b)
+	var jsonValue any
+	if err := json.Unmarshal(summarizeResult.Content, &jsonValue); err == nil {
+		byteResult, _ := json.MarshalIndent(jsonValue, "", "  ")
+		return string(byteResult)
 	}
-	return string(r.Content)
+	return string(summarizeResult.Content)
 }
 
 // Client wraps the Anthropic SDK for email summarization.

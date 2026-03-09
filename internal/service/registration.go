@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -29,34 +30,43 @@ type RegistrationService interface {
 }
 
 type registrationService struct {
-	db *gorm.DB
+	db        *gorm.DB
+	ioTimeout time.Duration
 }
 
 // NewRegistrationService returns a GORM-backed RegistrationService.
-func NewRegistrationService(db *gorm.DB) RegistrationService {
-	return &registrationService{db: db}
+func NewRegistrationService(db *gorm.DB, ioTimeout time.Duration) RegistrationService {
+	return &registrationService{db: db, ioTimeout: ioTimeout}
 }
 
 func (s *registrationService) SaveCredentials(ctx context.Context, userID int64, clientID, clientSecret, refreshToken string) error {
-	if err := commands.UpsertUser(s.db, userID); err != nil {
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	db := s.db.WithContext(ioCtx)
+	if err := commands.UpsertUser(db, userID); err != nil {
 		return err
 	}
-	if err := commands.UpsertCredentials(s.db, userID, clientID, clientSecret, refreshToken); err != nil {
+	if err := commands.UpsertCredentials(db, userID, clientID, clientSecret, refreshToken); err != nil {
 		return err
 	}
-	return commands.SetRegistered(s.db, userID, true)
+	return commands.SetRegistered(db, userID, true)
 }
 
 func (s *registrationService) VerifyCredentials(ctx context.Context, userID int64) error {
-	creds, err := queries.GetCredentials(s.db, userID)
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	db := s.db.WithContext(ioCtx)
+	creds, err := queries.GetCredentials(db, userID)
 	if err != nil {
 		return err
 	}
-	return gmail.VerifyRefreshToken(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
+	return gmail.VerifyRefreshToken(ioCtx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
 }
 
-func (s *registrationService) IsRegistered(_ context.Context, userID int64) (bool, error) {
-	user, err := queries.GetUser(s.db, userID)
+func (s *registrationService) IsRegistered(ctx context.Context, userID int64) (bool, error) {
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	user, err := queries.GetUser(s.db.WithContext(ioCtx), userID)
 	if err != nil {
 		return false, nil // user not found → not registered
 	}
@@ -64,15 +74,21 @@ func (s *registrationService) IsRegistered(_ context.Context, userID int64) (boo
 }
 
 func (s *registrationService) ClearCredentials(ctx context.Context, userID int64) error {
-	if err := commands.DeleteCredential(s.db, userID); err != nil {
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	db := s.db.WithContext(ioCtx)
+	if err := commands.DeleteCredential(db, userID); err != nil {
 		return err
 	}
-	return commands.SetRegistered(s.db, userID, false)
+	return commands.SetRegistered(db, userID, false)
 }
 
 func (s *registrationService) RotateCredentials(ctx context.Context) (int, error) {
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	db := s.db.WithContext(ioCtx)
 	// todo: consider pagination on larger datasets
-	rows, err := queries.ListAllCredentials(s.db)
+	rows, err := queries.ListAllCredentials(db)
 	if err != nil {
 		return 0, fmt.Errorf("failed to list credentials: %w", err)
 	}
@@ -88,7 +104,7 @@ func (s *registrationService) RotateCredentials(ctx context.Context) (int, error
 			logrus.WithError(err).WithField("user_id", cred.UserID).Error("rotate: failed to re-encrypt credentials")
 			continue
 		}
-		if err := s.db.Model(&cred).Update("encrypted_credentials", reencrypted).Error; err != nil {
+		if err := db.Model(&cred).Update("encrypted_credentials", reencrypted).Error; err != nil {
 			logrus.WithError(err).WithField("user_id", cred.UserID).Error("rotate: failed to save rotated credentials")
 			continue
 		}

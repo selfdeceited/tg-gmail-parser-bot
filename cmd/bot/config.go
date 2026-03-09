@@ -4,16 +4,20 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
 
+const defaultIOTimeout = 10 * time.Second
+
 type config struct {
-	TelegramBotToken      string
-	ClaudeAPIKey          string
-	TokenEncryptionKey1   string
+	TelegramBotToken          string
+	ClaudeAPIKey              string
+	TokenEncryptionKey1       string
 	TokenEncryptionKeyCurrent string
+	IOTimeout                 time.Duration
 }
 
 // loadConfig loads .env (if present) and validates all required environment
@@ -40,10 +44,20 @@ func loadConfig() config {
 		os.Exit(1)
 	}
 
+	ioTimeout := defaultIOTimeout
+	if raw := os.Getenv("IO_TIMEOUT"); raw != "" {
+		if parsed, err := time.ParseDuration(raw); err == nil {
+			ioTimeout = parsed
+		} else {
+			logrus.Warnf("invalid IO_TIMEOUT %q, using default %s", raw, defaultIOTimeout)
+		}
+	}
+
 	return config{
 		TelegramBotToken:          os.Getenv("TELEGRAM_BOT_TOKEN"),
 		ClaudeAPIKey:              os.Getenv("CLAUDE_API_KEY"),
 		TokenEncryptionKey1:       os.Getenv("TOKEN_ENCRYPTION_KEY_1"),
 		TokenEncryptionKeyCurrent: os.Getenv("TOKEN_ENCRYPTION_KEY_CURRENT"),
+		IOTimeout:                 ioTimeout,
 	}
 }

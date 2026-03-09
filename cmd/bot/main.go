@@ -27,10 +27,10 @@ func main() {
 		logrus.WithError(err).Fatal("failed to connect to database")
 	}
 
-	registrationService := service.NewRegistrationService(database)
+	registrationService := service.NewRegistrationService(database, cfg.IOTimeout)
 	promptService := service.NewPromptService(database)
 	claudeClient := claude.NewClient(claudeAPIKey)
-	watchService := service.NewWatchService(database, claudeClient)
+	watchService := service.NewWatchService(database, claudeClient, cfg.IOTimeout)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()

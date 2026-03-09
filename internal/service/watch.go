@@ -36,19 +36,21 @@ type WatchService interface {
 }
 
 type watchService struct {
-	db     *gorm.DB
-	claude *claude.Client
+	db        *gorm.DB
+	claude    *claude.Client
+	ioTimeout time.Duration
 
 	mu      sync.Mutex
 	cancels map[int64]context.CancelFunc
 }
 
 // NewWatchService returns a WatchService backed by the given DB and Claude client.
-func NewWatchService(db *gorm.DB, claudeClient *claude.Client) WatchService {
+func NewWatchService(db *gorm.DB, claudeClient *claude.Client, ioTimeout time.Duration) WatchService {
 	return &watchService{
-		db:      db,
-		claude:  claudeClient,
-		cancels: make(map[int64]context.CancelFunc),
+		db:        db,
+		claude:    claudeClient,
+		ioTimeout: ioTimeout,
+		cancels:   make(map[int64]context.CancelFunc),
 	}
 }
 
@@ -148,25 +150,30 @@ func (s *watchService) loadLastChecked(userID int64) time.Time {
 }
 
 func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, since time.Time, send SendFunc, log *logrus.Entry) error {
-	creds, err := queries.GetCredentials(s.db, userID)
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+
+	db := s.db.WithContext(ioCtx)
+
+	creds, err := queries.GetCredentials(db, userID)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to load credentials")
 		return err
 	}
 
-	gmailService, err := gmail.NewGmailService(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
+	gmailService, err := gmail.NewGmailService(ioCtx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to create gmail service")
 		return err
 	}
 
-	emails, err := gmail.FetchNewMessages(ctx, gmailService, since)
+	emails, err := gmail.FetchNewMessages(ioCtx, gmailService, since)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to fetch messages")
 		return err
 	}
 
-	prompts, err := queries.GetActivePrompts(s.db, userID)
+	prompts, err := queries.GetActivePrompts(db, userID)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to load prompts")
 		return err
@@ -177,7 +184,7 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 	}
 
 	for _, email := range emails {
-		s.processEmail(ctx, userID, chatID, email, prompts, send, log)
+		s.processEmail(ioCtx, userID, chatID, email, prompts, send, log)
 	}
 	return nil
 }
