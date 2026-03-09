@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 
+	"github.com/selfdeceited/tg-gmail-parser-bot/internal/claude"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/telegram"
@@ -25,6 +26,11 @@ func main() {
 		logrus.Fatal("TELEGRAM_BOT_TOKEN environment variable is required")
 	}
 
+	claudeAPIKey := os.Getenv("CLAUDE_API_KEY")
+	if claudeAPIKey == "" {
+		logrus.Fatal("CLAUDE_API_KEY environment variable is required")
+	}
+
 	database, err := db.Connect()
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to connect to database")
@@ -32,6 +38,8 @@ func main() {
 
 	regSvc := service.NewRegistrationService(database)
 	promptSvc := service.NewPromptService(database)
+	claudeClient := claude.NewClient(claudeAPIKey)
+	watchSvc := service.NewWatchService(database, claudeClient)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
@@ -43,7 +51,12 @@ func main() {
 		logrus.WithError(err).Fatal("failed to create bot")
 	}
 
-	telegram.RegisterHandlers(b, regSvc, promptSvc)
+	telegram.RegisterHandlers(b, regSvc, promptSvc, watchSvc)
+
+	// Resume watchers for users who had monitoring active before the restart.
+	if err := watchSvc.RestoreAll(ctx, telegram.MakeBotSendFunc(ctx, b)); err != nil {
+		logrus.WithError(err).Warn("failed to restore watchers from DB")
+	}
 
 	_, err = b.SetMyCommands(ctx, &tgbot.SetMyCommandsParams{
 		Commands: []models.BotCommand{
@@ -52,6 +65,7 @@ func main() {
 			{Command: "clearregistration", Description: "Unlink Gmail account and clear credentials"},
 			{Command: "configure", Description: "Manage summarization prompts"},
 			{Command: "addprompt", Description: "Add or edit a summarization prompt"},
+			{Command: "watch", Description: "Start or stop Gmail monitoring"},
 		},
 	})
 	if err != nil {

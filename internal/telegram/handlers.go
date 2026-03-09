@@ -11,12 +11,13 @@ import (
 )
 
 // RegisterHandlers registers all bot command and callback handlers.
-func RegisterHandlers(b *tgbot.Bot, regSvc service.RegistrationService, promptSvc service.PromptService) {
+func RegisterHandlers(b *tgbot.Bot, regSvc service.RegistrationService, promptSvc service.PromptService, watchSvc service.WatchService) {
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/start", tgbot.MatchTypeExact, StartHandler)
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(regSvc))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/clearregistration", tgbot.MatchTypeExact, ClearRegistrationHandler(regSvc))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureCommandHandler(promptSvc)))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/addprompt", tgbot.MatchTypeExact, requireRegistered(regSvc, AddPromptHandler(promptSvc)))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/watch", tgbot.MatchTypeExact, requireRegistered(regSvc, WatchHandler(watchSvc)))
 	b.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(regSvc, ConfigureCommandHandler(promptSvc)))
 
 	b.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "edit:", tgbot.MatchTypePrefix, requireRegisteredCB(regSvc, EditPromptCallback(promptSvc)))
