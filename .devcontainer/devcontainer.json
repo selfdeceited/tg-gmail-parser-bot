@@ -1,0 +1,32 @@
+{
+  "name": "tg-gmail-parser-bot",
+
+  // Tracks latest Go 1.x on Debian Bookworm — keep in sync with go.mod.
+  "image": "mcr.microsoft.com/devcontainers/go:1-bookworm",
+
+  "forwardPorts": [5432],
+  "portsAttributes": {
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "go mod download",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "github.vscode-github-actions"
+      ],
+      "settings": {
+        "go.toolsManagement.checkForUpdates": "off",
+        "go.useLanguageServer": true
+      }
+    }
+  }
+
+  // To inject secrets, create a .env file (see .env.example) and uncomment:
+  // "runArgs": ["--env-file", "${localWorkspaceFolder}/.env"]
+}

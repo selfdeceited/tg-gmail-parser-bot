@@ -1,0 +1,22 @@
+# Secrets — must never enter image layers
+.env
+
+# Pre-compiled local binary
+/bot
+
+# Version control
+.git
+.gitignore
+
+# Spec system and human buffer
+specs/
+.human/
+.claude/
+
+# Editor config
+.zed/
+.claudeignore
+CLAUDE.md
+
+# Devcontainer
+.devcontainer/

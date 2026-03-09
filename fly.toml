@@ -1,0 +1,16 @@
+# fly.toml — fly.io app configuration
+# Run `fly launch` to create the app and set the app name below.
+# Secrets (env vars) must be set via: fly secrets set KEY=value
+# Required secrets: TELEGRAM_BOT_TOKEN, CLAUDE_API_KEY, DATABASE_URL,
+#                   TOKEN_ENCRYPTION_KEY_1, TOKEN_ENCRYPTION_KEY_CURRENT
+
+app = "tg-gmail-parser-bot"
+primary_region = "iad"
+
+[build]
+  image = "ghcr.io/selfdeceited/tg-gmail-parser-bot:latest"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
