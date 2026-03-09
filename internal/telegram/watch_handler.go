@@ -45,7 +45,7 @@ func MakeBotSendFunc(ctx context.Context, b *tgbot.Bot) service.SendFunc {
 		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
 			Text:      msg,
-			ParseMode: models.ParseModeMarkdown,
+			ParseMode: models.ParseModeHTML,
 		})
 		if err != nil {
 			logrus.WithError(err).WithField("chat_id", chatID).Error("watch: failed to send notification")

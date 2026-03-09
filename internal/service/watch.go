@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"html"
 	"strings"
 	"sync"
 	"time"
@@ -224,5 +225,5 @@ func selectPrompts(email gmail.EmailMessage, prompts []entities.Prompt) []entiti
 }
 
 func formatSummary(r *claude.SummarizeResult) string {
-	return "📧 *" + r.Title + "*\n\n" + r.ContentString()
+	return "📧 <b>" + html.EscapeString(r.Title) + "</b>\n\n" + html.EscapeString(r.ContentString())
 }
