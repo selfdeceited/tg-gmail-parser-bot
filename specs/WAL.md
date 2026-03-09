@@ -4,7 +4,7 @@ _Max ~3000 tokens. Collapse completed work into single lines._
 
 ## Current Phase
 
-**IMPLEMENTATION** — configure button verification complete, next: /clearregistration or full /configure
+**IMPLEMENTATION** — /watch feature complete
 
 ## In Progress
 
@@ -30,6 +30,16 @@ _(none)_
   - `internal/db/queries/credential.go` — GetCredentials (decrypt + unmarshal → StoredCredentials)
   - New deps: golang.org/x/oauth2, google.golang.org/api/gmail/v1, github.com/sirupsen/logrus
   - All logging migrated to logrus; success events logged at Info with structured fields
+- [2026-03-09] /watch feature (spec://config/telegram#watch)
+  - `internal/db/entities/user.go` — added IsWatching, WatchChatID, LastCheckedAt columns
+  - `internal/db/commands/user.go` — SetWatching, UpdateLastChecked; fixed UpsertUser never being called during registration
+  - `internal/db/queries/user.go` — GetWatchingUsers
+  - `internal/gmail/reader.go` — EmailMessage, NewGmailService, FetchNewMessages (after: query + text/plain extraction)
+  - `internal/claude/summarize.go` — Claude Haiku client, prompt augmentation, JSON response parsing
+  - `internal/service/watch.go` — WatchService: per-user goroutines, 300s ticker, sender-filter routing, RestoreAll for startup resume
+  - `internal/telegram/watch_handler.go` — /watch toggle handler, MakeBotSendFunc
+  - `cmd/bot/main.go` — CLAUDE_API_KEY validation, WatchService init, RestoreAll on startup, /watch in command list
+  - New dep: github.com/anthropics/anthropic-sdk-go v1.26.0
 - [2026-03-07] persistence layer (spec://modules/db)
   - `internal/db/db.go` — Connect(), AutoMigrate
   - `internal/db/crypto.go` — EncryptToken/DecryptToken (AES-256-GCM, TOKEN_ENCRYPTION_KEY env var)
@@ -52,6 +62,7 @@ _(none)_
 
 - `internal/telegram/handlers.go`: `models.ParseModeMarkdown` = MarkdownV2 in go-telegram/bot (counterintuitive naming — do NOT change to ParseModeMarkdownV2, it does not exist)
 - `TOKEN_ENCRYPTION_KEY` must be base64-encoded 32-byte key — generate with `openssl rand -base64 32`
+- Claude model: use `anthropic.ModelClaudeHaiku4_5_20251001` — `claude-3-5-haiku-latest` returns 404
 - `.human/` — off-limits, never read or modify
 
 ## Session Notes

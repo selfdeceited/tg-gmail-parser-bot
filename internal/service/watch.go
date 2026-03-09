@@ -147,38 +147,39 @@ func (s *watchService) loadLastChecked(userID int64) time.Time {
 	return *user.LastCheckedAt
 }
 
-func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, since time.Time, send SendFunc, log *logrus.Entry) {
+func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, since time.Time, send SendFunc, log *logrus.Entry) error {
 	creds, err := queries.GetCredentials(s.db, userID)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to load credentials")
-		return
+		return err
 	}
 
 	gmailSvc, err := gmail.NewGmailService(ctx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to create gmail service")
-		return
+		return err
 	}
 
 	emails, err := gmail.FetchNewMessages(ctx, gmailSvc, since)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to fetch messages")
-		return
+		return err
 	}
 
 	prompts, err := queries.GetActivePrompts(s.db, userID)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to load prompts")
-		return
+		return err
 	}
 	if len(prompts) == 0 {
 		log.Info("watch: no prompts configured, skipping")
-		return
+		return nil
 	}
 
 	for _, email := range emails {
 		s.processEmail(ctx, userID, chatID, email, prompts, send, log)
 	}
+	return nil
 }
 
 func (s *watchService) processEmail(ctx context.Context, userID int64, chatID int64, email gmail.EmailMessage, prompts []entities.Prompt, send SendFunc, log *logrus.Entry) {
