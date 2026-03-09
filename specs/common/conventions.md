@@ -86,3 +86,7 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 - Always use `oauth2.AccessTypeOffline` + `oauth2.ApprovalForce` to guarantee a refresh token is returned
 - Smoke test (read last message) is run before saving any credentials
 - Refresh token is AES-256-GCM encrypted before persistence via `EncryptCredentials`
+
+
+## General development
+ - enhance centralizing logging with scopes and enrichment by tgId, session, etc
