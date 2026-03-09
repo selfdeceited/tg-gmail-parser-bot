@@ -13,3 +13,9 @@ func GetUser(db *gorm.DB, telegramID int64) (*entities.User, error) {
 	}
 	return &user, nil
 }
+
+func GetWatchingUsers(db *gorm.DB) ([]entities.User, error) {
+	var users []entities.User
+	err := db.Where("is_watching = true").Find(&users).Error
+	return users, err
+}

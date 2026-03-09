@@ -31,3 +31,18 @@ func SetActive(db *gorm.DB, telegramID int64, active bool) error {
 		Where("id = ?", telegramID).
 		Update("is_active", active).Error
 }
+
+func SetWatching(db *gorm.DB, telegramID int64, chatID int64, watching bool) error {
+	return db.Model(&entities.User{}).
+		Where("id = ?", telegramID).
+		Updates(map[string]interface{}{
+			"is_watching":  watching,
+			"watch_chat_id": chatID,
+		}).Error
+}
+
+func UpdateLastChecked(db *gorm.DB, telegramID int64, t time.Time) error {
+	return db.Model(&entities.User{}).
+		Where("id = ?", telegramID).
+		Update("last_checked_at", t).Error
+}
