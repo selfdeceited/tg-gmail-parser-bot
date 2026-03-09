@@ -1,10 +1,17 @@
 # Telegram Gmail Parser Bot
+`@tg_gmail_ai_parser_bot`
 
-This is a Telegram bot that allows you to parse Gmail emails, set up filters and prompts on how to interpret them and receive notifications via Telegram.
+This is a Telegram bot that allows you to parse Gmail emails, set up filters and prompts on how to sum them up and receive notifications via Telegram.
 
 ## Usage
 
-TBD
+- Set up Gmail Oauth integration using Google Cloud. The bot will have quick instructions on that.
+- Configure your prompts
+<img width="722" height="340" alt="image" src="https://github.com/user-attachments/assets/fc9b286d-8866-477b-855a-1cbbfb396a6c" />
+
+- Receive notifications after `/watch` commands based on your prompts
+<img width="499" height="178" alt="image" src="https://github.com/user-attachments/assets/6b0bf0d6-7019-45b1-8d3a-b9eb2ce691db" />
+
 
 ## Local Development
 
