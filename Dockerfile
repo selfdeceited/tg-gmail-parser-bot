@@ -1,7 +1,10 @@
 # Stage 1: Build
-# golang:1.23-bookworm used as 1.26 is not yet published on Docker Hub;
-# go.mod `go` directive is a minimum version requirement, not a strict pin.
+# golang:1.23-bookworm used as 1.26 is not yet published on Docker Hub.
+# GOTOOLCHAIN=auto lets the Go toolchain manager download and use the version
+# required by go.mod (1.26.1) automatically.
 FROM golang:1.23-bookworm AS builder
+
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /src
 
