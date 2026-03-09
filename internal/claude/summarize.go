@@ -128,10 +128,7 @@ Respond with ONLY valid JSON — no markdown, no code fences, no extra text. The
 func stripCodeFence(text string) string {
 	text = strings.TrimSpace(text)
 	if strings.HasPrefix(text, "```") {
-		text = text[3:]
-		if strings.HasPrefix(text, "json") {
-			text = text[4:]
-		}
+		text = strings.TrimPrefix(text[3:], "json")
 		if idx := strings.LastIndex(text, "```"); idx != -1 {
 			text = text[:idx]
 		}

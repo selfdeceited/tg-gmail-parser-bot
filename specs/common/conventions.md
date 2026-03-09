@@ -15,6 +15,10 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 - Variable names use the full service name — never abbreviated suffixes like `regSvc`, `promptSvc`. Use `registrationService`, `promptService`, `watchService`.
 - Avoid single-letter variable names. Use descriptive names: `bot` instead of `b`, `gmailService` instead of `svc`, etc.
 
+## Development Workflow {#workflow}
+- Run `make check` before committing — it executes `golangci-lint` then `go build` in order.
+- Lint failures block the build. All lint issues must be resolved, not suppressed.
+
 ## Reliability {#reliability}
 - Use timeouts and context cancellation to handle long-running operations gracefully. I/O timeout should be configurable (default to be 10s)
 

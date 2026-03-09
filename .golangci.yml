@@ -1,0 +1,17 @@
+version: "2"
+
+linters:
+  enable:
+    - staticcheck   # includes SA*, S*, QF* — covers S1017 and all simplification rules
+    - govet         # reports suspicious constructs
+    - errcheck      # ensures errors are checked
+    - unused        # detects unused code
+
+linters-settings:
+  staticcheck:
+    checks: ["all"]
+
+issues:
+  # Treat every finding as an error — no warnings pass silently.
+  max-issues-per-linter: 0
+  max-same-issues: 0
