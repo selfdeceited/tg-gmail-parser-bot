@@ -12,7 +12,7 @@ import (
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
 )
 
-const model = anthropic.ModelClaude3_5HaikuLatest
+const model = anthropic.ModelClaudeHaiku4_5_20251001
 
 // SummarizeResult holds the structured response from Claude.
 type SummarizeResult struct {
