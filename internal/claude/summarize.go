@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
@@ -59,7 +60,7 @@ func (c *Client) Summarize(ctx context.Context, userPrompt string, email gmail.E
 		return nil, fmt.Errorf("claude returned empty response")
 	}
 
-	raw := msg.Content[0].Text
+	raw := stripCodeFence(msg.Content[0].Text)
 	logrus.WithFields(logrus.Fields{
 		"message_id": email.ID,
 		"response":   raw,
@@ -90,7 +91,7 @@ Email from: %s
 Email body:
 %s
 
-Answer in JSON format with the following fields:
+Respond with ONLY valid JSON — no markdown, no code fences, no extra text. The JSON must have exactly these fields:
 - result: "matched" or "not matched"
 - title: email subject/title
 - content: summary of the email content per the prompt criteria`,
@@ -99,4 +100,19 @@ Answer in JSON format with the following fields:
 		email.From,
 		email.Body,
 	)
+}
+
+// stripCodeFence removes optional ```json ... ``` or ``` ... ``` wrapping from Claude responses.
+func stripCodeFence(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "```") {
+		s = s[3:]
+		if strings.HasPrefix(s, "json") {
+			s = s[4:]
+		}
+		if idx := strings.LastIndex(s, "```"); idx != -1 {
+			s = s[:idx]
+		}
+	}
+	return strings.TrimSpace(s)
 }
