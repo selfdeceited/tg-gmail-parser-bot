@@ -25,6 +25,8 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+        env:
+          GOTOOLCHAIN: auto
 
   build-and-push:
     name: Build and push Docker image
