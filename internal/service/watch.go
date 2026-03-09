@@ -127,10 +127,13 @@ func (s *watchService) runLoop(ctx context.Context, userID int64, chatID int64, 
 		case <-ticker.C:
 			now := time.Now().UTC()
 			log.WithField("since", since).Info("watch: polling Gmail")
-			s.poll(ctx, userID, chatID, since, send, log)
-			since = now
-			if err := commands.UpdateLastChecked(s.db, userID, since); err != nil {
-				log.WithError(err).Error("watch: failed to update last_checked_at")
+			if err := s.poll(ctx, userID, chatID, since, send, log); err != nil {
+				log.WithError(err).Error("watch: poll failed, last_checked_at not advanced")
+			} else {
+				since = now
+				if err := commands.UpdateLastChecked(s.db, userID, since); err != nil {
+					log.WithError(err).Error("watch: failed to update last_checked_at")
+				}
 			}
 		}
 	}

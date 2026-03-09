@@ -48,5 +48,16 @@ To revoke a user's Gmail access:
 - The user can run `/clearregistration` — this hard-deletes their credentials from the database
 - Separately, revoke the OAuth token in [Google Account Permissions](https://myaccount.google.com/permissions) to prevent any cached token from being reused
 
+## Known Trade-offs
+
+### Email processing and `lastCheckedAt`
+
+The poll timestamp (`lastCheckedAt`) is only advanced when Gmail fetch and message listing succeed. However, if Claude summarization fails for individual emails within an otherwise successful poll (e.g. transient Claude API error), those emails are **not retried** — the timestamp still advances and those emails are skipped on the next cycle.
+
+The alternative (blocking the timestamp on any Claude failure) would cause duplicate Telegram notifications, since emails already successfully processed in the same batch would be re-sent on the next poll.
+
+The correct long-term fix is to track processed Gmail message IDs in the database, enabling safe per-message retry. This is not currently implemented.
+
 ## Things to improve
  - Notes on the GCP registration process
+ - Per-message ID tracking to allow safe retry on Claude failures
