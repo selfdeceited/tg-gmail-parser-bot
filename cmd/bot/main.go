@@ -7,7 +7,6 @@ import (
 
 	tgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/claude"
@@ -19,17 +18,9 @@ import (
 func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 
-	_ = godotenv.Load()
-
-	token := os.Getenv("TELEGRAM_BOT_TOKEN")
-	if token == "" {
-		logrus.Fatal("TELEGRAM_BOT_TOKEN environment variable is required")
-	}
-
-	claudeAPIKey := os.Getenv("CLAUDE_API_KEY")
-	if claudeAPIKey == "" {
-		logrus.Fatal("CLAUDE_API_KEY environment variable is required")
-	}
+	cfg := loadConfig()
+	token := cfg.TelegramBotToken
+	claudeAPIKey := cfg.ClaudeAPIKey
 
 	database, err := db.Connect()
 	if err != nil {
