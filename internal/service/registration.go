@@ -38,6 +38,9 @@ func NewRegistrationService(db *gorm.DB) RegistrationService {
 }
 
 func (s *registrationService) SaveCredentials(ctx context.Context, userID int64, clientID, clientSecret, refreshToken string) error {
+	if err := commands.UpsertUser(s.db, userID); err != nil {
+		return err
+	}
 	if err := commands.UpsertCredentials(s.db, userID, clientID, clientSecret, refreshToken); err != nil {
 		return err
 	}
