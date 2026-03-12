@@ -46,3 +46,9 @@ func UpdateLastChecked(db *gorm.DB, telegramID int64, t time.Time) error {
 		Where("id = ?", telegramID).
 		Update("last_checked_at", t).Error
 }
+
+func SetGmailAccountIndex(db *gorm.DB, telegramID int64, index int) error {
+	return db.Model(&entities.User{}).
+		Where("id = ?", telegramID).
+		Update("gmail_account_index", index).Error
+}

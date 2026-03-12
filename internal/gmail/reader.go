@@ -41,7 +41,8 @@ func NewGmailService(ctx context.Context, clientID, clientSecret, refreshToken s
 }
 
 // FetchNewMessages returns all messages received after the given timestamp.
-func FetchNewMessages(ctx context.Context, svc *gmailapi.Service, since time.Time) ([]EmailMessage, error) {
+// accountIndex is the Gmail /u/<N>/ slot used to build direct message URLs.
+func FetchNewMessages(ctx context.Context, svc *gmailapi.Service, since time.Time, accountIndex int) ([]EmailMessage, error) {
 	query := fmt.Sprintf("after:%d", since.Unix())
 	logrus.WithFields(logrus.Fields{"query": query}).Info("gmail: fetching new messages")
 
@@ -63,7 +64,7 @@ func FetchNewMessages(ctx context.Context, svc *gmailapi.Service, since time.Tim
 			logrus.WithError(err).WithField("message_id", m.Id).Warn("gmail: failed to fetch message, skipping")
 			continue
 		}
-		email := parseMessage(msg)
+		email := parseMessage(msg, accountIndex)
 		logrus.WithFields(logrus.Fields{
 			"message_id": email.ID,
 			"from":       email.From,
@@ -74,10 +75,10 @@ func FetchNewMessages(ctx context.Context, svc *gmailapi.Service, since time.Tim
 	return emails, nil
 }
 
-func parseMessage(msg *gmailapi.Message) EmailMessage {
+func parseMessage(msg *gmailapi.Message, accountIndex int) EmailMessage {
 	email := EmailMessage{
 		ID:   msg.Id,
-		URL:  "https://mail.google.com/mail/u/0/#all/" + msg.Id,
+		URL:  fmt.Sprintf("https://mail.google.com/mail/u/%d/#all/%s", accountIndex, msg.Id),
 		Body: msg.Snippet,
 	}
 

@@ -11,15 +11,16 @@ import (
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
 )
 
-// ConfigureCommandHandler handles /configure — lists the user's prompts with inline Edit/Remove buttons.
-func ConfigureCommandHandler(svc service.PromptService) tgbot.HandlerFunc {
+// ConfigureCommandHandler handles /configure — shows account settings and lists prompts.
+func ConfigureCommandHandler(promptSvc service.PromptService, regSvc service.RegistrationService) tgbot.HandlerFunc {
 	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.Message == nil {
 			return
 		}
 		userID := update.Message.From.ID
 		chatID := update.Message.Chat.ID
-		sendPromptList(ctx, bot, svc, userID, chatID)
+		sendAccountSettings(ctx, bot, regSvc, userID, chatID)
+		sendPromptList(ctx, bot, promptSvc, userID, chatID)
 	}
 }
 

@@ -27,6 +27,10 @@ type RegistrationService interface {
 	// RotateCredentials re-encrypts all stored credentials with the current key version.
 	// Call this after bumping TOKEN_ENCRYPTION_KEY_CURRENT to migrate existing rows.
 	RotateCredentials(ctx context.Context) (rotated int, err error)
+	// GetGmailAccountIndex returns the Gmail account index (the /u/<N>/ slot) for the user.
+	GetGmailAccountIndex(ctx context.Context, userID int64) (int, error)
+	// SetGmailAccountIndex updates the Gmail account index for the user.
+	SetGmailAccountIndex(ctx context.Context, userID int64, index int) error
 }
 
 type registrationService struct {
@@ -81,6 +85,22 @@ func (s *registrationService) ClearCredentials(ctx context.Context, userID int64
 		return err
 	}
 	return commands.SetRegistered(db, userID, false)
+}
+
+func (s *registrationService) GetGmailAccountIndex(ctx context.Context, userID int64) (int, error) {
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	user, err := queries.GetUser(s.db.WithContext(ioCtx), userID)
+	if err != nil {
+		return 0, err
+	}
+	return user.GmailAccountIndex, nil
+}
+
+func (s *registrationService) SetGmailAccountIndex(ctx context.Context, userID int64, index int) error {
+	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
+	defer cancel()
+	return commands.SetGmailAccountIndex(s.db.WithContext(ioCtx), userID, index)
 }
 
 func (s *registrationService) RotateCredentials(ctx context.Context) (int, error) {

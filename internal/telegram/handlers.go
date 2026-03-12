@@ -15,15 +15,16 @@ func RegisterHandlers(bot *tgbot.Bot, registrationService service.RegistrationSe
 	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/start", tgbot.MatchTypeExact, StartHandler)
 	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/register", tgbot.MatchTypeExact, RegisterHandler(registrationService))
 	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/clearregistration", tgbot.MatchTypeExact, ClearRegistrationHandler(registrationService))
-	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/configure", tgbot.MatchTypeExact, requireRegistered(registrationService, ConfigureCommandHandler(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/configure", tgbot.MatchTypeExact, requireRegistered(registrationService, ConfigureCommandHandler(promptService, registrationService)))
 	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/addprompt", tgbot.MatchTypeExact, requireRegistered(registrationService, AddPromptHandler(promptService)))
 	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "/watch", tgbot.MatchTypeExact, requireRegistered(registrationService, WatchHandler(watchService)))
-	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(registrationService, ConfigureCommandHandler(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeMessageText, "⚙️ Configure", tgbot.MatchTypeExact, requireRegistered(registrationService, ConfigureCommandHandler(promptService, registrationService)))
 
 	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "edit:", tgbot.MatchTypePrefix, requireRegisteredCB(registrationService, EditPromptCallback(promptService)))
 	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "remove:", tgbot.MatchTypePrefix, requireRegisteredCB(registrationService, RemovePromptCallback(promptService)))
 	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "addprompt:new", tgbot.MatchTypeExact, requireRegisteredCB(registrationService, AddPromptNewCallback(promptService)))
 	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "addprompt:nofilter", tgbot.MatchTypeExact, requireRegisteredCB(registrationService, AddPromptNoFilterCallback(promptService)))
+	bot.RegisterHandler(tgbot.HandlerTypeCallbackQueryData, "gmailaccount:set", tgbot.MatchTypeExact, requireRegisteredCB(registrationService, SetGmailAccountCallback(registrationService)))
 
 	logrus.Info("handlers registered")
 }
@@ -32,8 +33,10 @@ func RegisterHandlers(bot *tgbot.Bot, registrationService service.RegistrationSe
 func DefaultHandler(registrationService service.RegistrationService, promptService service.PromptService) tgbot.HandlerFunc {
 	registerConv := HandleConversation(registrationService)
 	addPromptConv := HandleAddPromptConversation(promptService)
+	gmailAccountConv := HandleSetGmailAccountConversation(registrationService, promptService)
 	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		registerConv(ctx, bot, update)
 		addPromptConv(ctx, bot, update)
+		gmailAccountConv(ctx, bot, update)
 	}
 }
