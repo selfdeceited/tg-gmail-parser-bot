@@ -1,6 +1,6 @@
 module github.com/selfdeceited/tg-gmail-parser-bot
 
-go 1.25.0
+go 1.24.0
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.26.0
