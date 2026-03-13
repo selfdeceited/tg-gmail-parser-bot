@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"html"
+	"net/mail"
 	"strings"
 	"sync"
 	"time"
@@ -259,15 +260,27 @@ func (s *watchService) processEmail(ctx context.Context, userID int64, chatID in
 // If any prompt filter matches the sender, only that prompt is returned (first-match intent).
 // Otherwise only prompts with no filter are returned.
 func filterPrompts(email gmail.EmailMessage, prompts []entities.Prompt) []entities.Prompt {
+	fromAddr := extractEmailAddress(email.From)
 	var selected []entities.Prompt
 	for _, p := range prompts {
-		if strings.EqualFold(p.Filter, email.From) {
+		if strings.EqualFold(p.Filter, fromAddr) || strings.EqualFold(p.Filter, email.From) {
 			return []entities.Prompt{p} // spec: "first parser with the matching sender address"
 		} else if p.Filter == "" {
 			selected = append(selected, p)
 		}
 	}
 	return selected
+}
+
+// extractEmailAddress parses the bare email address from an RFC 5322 From header
+// value such as "Pointer <suraj@pointer.io>". Falls back to the raw string if
+// parsing fails.
+func extractEmailAddress(from string) string {
+	addr, err := mail.ParseAddress(from)
+	if err != nil {
+		return from
+	}
+	return addr.Address
 }
 
 func formatSummary(r *claude.SummarizeResult, url, promptShortID string) string {
