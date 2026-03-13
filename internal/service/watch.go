@@ -223,51 +223,56 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 func (s *watchService) processEmail(ctx context.Context, userID int64, chatID int64, email gmail.EmailMessage, prompts []entities.Prompt, send SendFunc, log *logrus.Entry) {
 	log = log.WithFields(logrus.Fields{
 		"message_id": email.ID,
+		"user_id":    userID,
 		"from":       email.From,
 		"subject":    email.Subject,
 	})
 	log.Info("watch: processing email")
 
-	toTry := selectPrompts(email, prompts)
-	log.WithField("prompt_count", len(toTry)).Info("watch: prompts selected for email")
+	filtered := filterPrompts(email, prompts)
+	log.WithField("prompt_count", len(filtered)).Info("watch: prompts selected for email")
 
-	for _, p := range toTry {
+	for _, p := range filtered {
+		log = log.WithFields(logrus.Fields{
+			"prompt_id": p.ID,
+			"email_URL": email.URL,
+		})
 		result, err := s.claude.Summarize(ctx, p.Prompt, email)
 		if err != nil {
-			log.WithError(err).WithField("prompt_id", p.ID).Error("watch: claude summarization failed, skipping prompt")
+			log.WithError(err).Error("watch: claude summarization failed, skipping prompt")
 			continue
 		}
 
 		if strings.EqualFold(result.Result, "matched") {
-			log.WithField("prompt_id", p.ID).Info("watch: email matched, sending to chat")
-			send(chatID, formatSummary(result, email.URL))
+			log.Info("watch: email matched the prompt, sending to chat")
+			send(chatID, formatSummary(result, email.URL, p.ID.String()[:6]))
 			return
 		}
 
-		log.WithField("prompt_id", p.ID).Info("watch: email not matched, trying next prompt")
+		log.Info("watch: did not match the prompt, skipping")
 	}
 
 	log.Info("watch: no prompt matched, email ignored")
 }
 
-// selectPrompts returns the prompts to run against this email.
-// If any prompt filter matches the sender, only those are returned (first-match intent).
-// Otherwise all prompts are returned in order.
-func selectPrompts(email gmail.EmailMessage, prompts []entities.Prompt) []entities.Prompt {
-	var matched []entities.Prompt
+// filterPrompts returns the prompts to run against this email.
+// If any prompt filter matches the sender, only that prompt is returned (first-match intent).
+// Otherwise only prompts with no filter are returned.
+func filterPrompts(email gmail.EmailMessage, prompts []entities.Prompt) []entities.Prompt {
+	var selected []entities.Prompt
 	for _, p := range prompts {
-		if p.Filter != "" && strings.EqualFold(p.Filter, email.From) {
-			matched = append(matched, p)
+		if strings.EqualFold(p.Filter, email.From) {
+			return []entities.Prompt{p} // spec: "first parser with the matching sender address"
+		} else if p.Filter == "" {
+			selected = append(selected, p)
 		}
 	}
-	if len(matched) > 0 {
-		return matched[:1] // spec: "first parser with the matching sender address"
-	}
-	return prompts
+	return selected
 }
 
-func formatSummary(r *claude.SummarizeResult, url string) string {
+func formatSummary(r *claude.SummarizeResult, url, promptShortID string) string {
 	return "📧 <b>" + html.EscapeString(r.Title) + "</b>\n\n" +
 		html.EscapeString(r.ContentString()) +
-		"\n\n<a href=\"" + url + "\">Open in Gmail</a>"
+		"\n\n<a href=\"" + url + "\">Open in Gmail</a>" +
+		"\\|  matched by <code>" + promptShortID + "</code>"
 }

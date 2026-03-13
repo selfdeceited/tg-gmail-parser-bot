@@ -57,7 +57,8 @@ func SendPromptList(ctx context.Context, bot *tgbot.Bot, svc service.PromptServi
 		if p.Filter != "" {
 			filterLine = EscapeMarkdown(p.Filter)
 		}
-		text := fmt.Sprintf("📌 *Filter:* %s\n💬 %s", filterLine, EscapeMarkdown(p.Prompt))
+		shortID := p.ID.String()[:6]
+		text := fmt.Sprintf("📌 *Filter:* %s\n💬 %s\n`%s`", filterLine, EscapeMarkdown(p.Prompt), shortID)
 		idStr := p.ID.String()
 		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
