@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,10 @@ import (
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/db/queries"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
 )
+
+// ErrNotRegistered is returned when an operation requires a linked Gmail account
+// but none exists for the user. Callers should check with errors.Is.
+var ErrNotRegistered = errors.New("user not registered")
 
 // RegistrationService owns the business logic for Gmail account linking.
 type RegistrationService interface {
@@ -62,6 +67,9 @@ func (s *registrationService) VerifyCredentials(ctx context.Context, userID int6
 	db := s.db.WithContext(ioCtx)
 	creds, err := queries.GetCredentials(db, userID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotRegistered
+		}
 		return err
 	}
 	return gmail.VerifyRefreshToken(ioCtx, creds.ClientID, creds.ClientSecret, creds.RefreshToken)
@@ -92,6 +100,9 @@ func (s *registrationService) GetGmailAccountIndex(ctx context.Context, userID i
 	defer cancel()
 	user, err := queries.GetUser(s.db.WithContext(ioCtx), userID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, ErrNotRegistered
+		}
 		return 0, err
 	}
 	return user.GmailAccountIndex, nil

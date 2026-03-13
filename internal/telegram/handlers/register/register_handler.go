@@ -2,6 +2,7 @@ package register
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	tgbot "github.com/go-telegram/bot"
@@ -22,7 +23,8 @@ func RegisterConversationHandler(svc service.RegistrationService) tgbot.HandlerF
 		userID := update.Message.From.ID
 		chatID := update.Message.Chat.ID
 
-		if err := svc.VerifyCredentials(ctx, userID); err == nil {
+		switch err := svc.VerifyCredentials(ctx, userID); {
+		case err == nil:
 			logrus.WithField("user_id", userID).Info("register: already registered with valid credentials, skipping")
 			_, _ = bot.SendMessage(ctx, &tgbot.SendMessageParams{
 				ChatID:    chatID,
@@ -34,6 +36,10 @@ func RegisterConversationHandler(svc service.RegistrationService) tgbot.HandlerF
 					OneTimeKeyboard: false,
 				},
 			})
+			return
+		case !errors.Is(err, service.ErrNotRegistered):
+			logrus.WithError(err).WithField("user_id", userID).Error("register: failed to verify credentials")
+			handlers.SendText(ctx, bot, chatID, "Something went wrong while checking your account\\. Please try again later\\.")
 			return
 		}
 

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	tgbot "github.com/go-telegram/bot"
@@ -97,6 +98,11 @@ func SendAccountSettings(ctx context.Context, bot *tgbot.Bot, svc service.Regist
 	index, err := svc.GetGmailAccountIndex(ctx, userID)
 	if err != nil {
 		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to get gmail account index")
+		if errors.Is(err, service.ErrNotRegistered) {
+			SendText(ctx, bot, chatID, "Your account data is missing\\. Please run /register to link your Gmail account again\\.")
+		} else {
+			SendText(ctx, bot, chatID, "Failed to load account settings\\. Please try again\\.")
+		}
 		return
 	}
 
