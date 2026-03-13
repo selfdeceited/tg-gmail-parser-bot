@@ -29,6 +29,9 @@ _(none)_
   - `handlers/addprompt/` — addprompt_handler.go, addprompt_state.go
   - `handlers/gmailaccount/` — gmailaccount_handler.go, gmailaccount_state.go
   - `internal/telegram/setup.go` (renamed from handlers.go) — RegisterHandlers, DefaultHandler, StartBot
+- [2026-03-13] concurrency hardening: per-poll 15s timeout, ctx guard in email loop, WaitGroup graceful shutdown (spec://modules/watch)
+- [2026-03-13] error handling: loadLastChecked logs DB errors, poll() returns error on GetUser failure, Stop() logs SetWatching failure (spec://modules/watch)
+- [2026-03-13] ErrNotRegistered sentinel; register handler fails fast on DB error; configure handler sends user message on account missing/error (spec://modules/config)
 
 ## Known Issues
 
@@ -50,3 +53,24 @@ _(none)_
 ## Session Notes
 
 _(cleared each session)_
+
+---
+
+**[2026-03-13 session completed]**
+
+### Concurrency fixes (`internal/service/watch.go`)
+- Added `const pollTimeout = 15 * time.Second`; wraps each poll cycle in `context.WithTimeout`
+- Added `ctx.Err() != nil` guard in email processing loop to stop early on timeout
+- Added `sync.WaitGroup` to `watchService`; `Wait()` method on interface; `wg.Add(1)` before goroutine, `defer wg.Done()` in `runLoop`
+- `cmd/bot/main.go`: calls `svc.watchService.Wait()` after context cancel for graceful shutdown
+
+### Error handling fixes
+- `loadLastChecked`: logs DB error with structured fields; separated nil `LastCheckedAt` case (no longer silently swallows real errors)
+- `poll()` → `GetUser`: returns error instead of silently defaulting `accountIndex=0`
+- `Stop()`: logs `SetWatching` DB error instead of discarding with `_ =`
+
+### Sentinel error (`internal/service/registration.go`)
+- Added `var ErrNotRegistered = errors.New("user not registered")` sentinel
+- `VerifyCredentials` and `GetGmailAccountIndex` translate `gorm.ErrRecordNotFound` → `ErrNotRegistered`
+- `register_handler.go`: uses `errors.Is(err, service.ErrNotRegistered)` switch — DB errors now fail fast with log+message instead of silently entering registration flow
+- `configure_handler.go` (`SendAccountSettings`): `ErrNotRegistered` → "Your account data is missing. Please run /register…"; other errors → "Failed to load account settings."
