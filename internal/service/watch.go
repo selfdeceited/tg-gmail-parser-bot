@@ -90,7 +90,9 @@ func (s *watchService) Stop(userID int64) bool {
 	s.mu.Unlock()
 
 	if ok {
-		_ = commands.SetWatching(s.db, userID, 0, false)
+		if err := commands.SetWatching(s.db, userID, 0, false); err != nil {
+			logrus.WithError(err).WithField("user_id", userID).Error("watch: failed to persist stop — watcher may resume on restart")
+		}
 		logrus.WithField("user_id", userID).Info("watch: stopped")
 	}
 	return ok
@@ -126,7 +128,7 @@ func (s *watchService) runLoop(ctx context.Context, userID int64, chatID int64, 
 	defer s.wg.Done()
 	log := logrus.WithFields(logrus.Fields{"user_id": userID, "chat_id": chatID})
 
-	since := s.loadLastChecked(userID)
+	since := s.loadLastChecked(userID, log)
 	log.WithField("since", since).Info("watch: poll loop starting")
 
 	ticker := time.NewTicker(pollInterval)
@@ -155,9 +157,13 @@ func (s *watchService) runLoop(ctx context.Context, userID int64, chatID int64, 
 	}
 }
 
-func (s *watchService) loadLastChecked(userID int64) time.Time {
+func (s *watchService) loadLastChecked(userID int64, log *logrus.Entry) time.Time {
 	user, err := queries.GetUser(s.db, userID)
-	if err != nil || user.LastCheckedAt == nil {
+	if err != nil {
+		log.WithError(err).Warn("watch: failed to load last_checked_at, defaulting to now")
+		return time.Now().UTC()
+	}
+	if user.LastCheckedAt == nil {
 		return time.Now().UTC()
 	}
 	return *user.LastCheckedAt
@@ -182,10 +188,11 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 	}
 
 	user, err := queries.GetUser(db, userID)
-	accountIndex := 0
-	if err == nil {
-		accountIndex = user.GmailAccountIndex
+	if err != nil {
+		log.WithError(err).Error("watch: failed to load user, aborting poll")
+		return err
 	}
+	accountIndex := user.GmailAccountIndex
 
 	emails, err := gmail.FetchNewMessages(ioCtx, gmailService, since, accountIndex)
 	if err != nil {
