@@ -1,4 +1,4 @@
-package telegram
+package handlers
 
 import (
 	"context"
@@ -22,19 +22,19 @@ func WatchHandler(watchService service.WatchService) tgbot.HandlerFunc {
 		if watchService.IsWatching(userID) {
 			watchService.Stop(userID)
 			logrus.WithField("user_id", userID).Info("watch: user stopped watching")
-			sendText(ctx, bot, chatID, "🔴 Gmail monitoring stopped\\.")
+			SendText(ctx, bot, chatID, "🔴 Gmail monitoring stopped\\.")
 			return
 		}
 
 		send := MakeBotSendFunc(ctx, bot)
 		if err := watchService.Start(ctx, userID, chatID, send); err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("watch: failed to start")
-			sendText(ctx, bot, chatID, "❌ Failed to start monitoring\\. Please try again\\.")
+			SendText(ctx, bot, chatID, "❌ Failed to start monitoring\\. Please try again\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("watch: user started watching")
-		sendText(ctx, bot, chatID, "🟢 Gmail monitoring started\\. You'll be notified when matching emails arrive\\.")
+		SendText(ctx, bot, chatID, "🟢 Gmail monitoring started\\. You'll be notified when matching emails arrive\\.")
 	}
 }
 

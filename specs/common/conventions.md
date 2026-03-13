@@ -7,10 +7,19 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
 - Services are defined as **interfaces** in `internal/service/` and implemented in the same package using injected dependencies
 - Handlers accept service interfaces — never `*gorm.DB` or infrastructure types directly
 - Services call `internal/db/commands`, `internal/db/queries`, and `internal/gmail` packages
-- `main.go` constructs concrete implementations and injects them:
+- All service construction and wiring lives in `cmd/bot/services.go` — never in `main.go` or anywhere else:
+  - Declare every service as a field in the `services` struct
+  - Instantiate every service inside `wireServices(db, cfg) services`
+  - `main.go` calls `wireServices` once and passes fields to the bot/handlers
   ```go
-  registrationService := service.NewRegistrationService(database)
-  telegram.RegisterHandlers(b, registrationService)
+  // services.go
+  type services struct {
+      registrationService service.RegistrationService
+      promptService       service.PromptService
+      watchService        service.WatchService
+  }
+
+  func wireServices(db *gorm.DB, cfg config) services { ... }
   ```
 - Variable names use the full service name — never abbreviated suffixes like `regSvc`, `promptSvc`. Use `registrationService`, `promptService`, `watchService`.
 - Avoid single-letter variable names. Use descriptive names: `bot` instead of `b`, `gmailService` instead of `svc`, etc.
@@ -32,13 +41,13 @@ Business logic lives in `internal/service/`, between handlers (delivery) and DB/
       return func(ctx context.Context, b *tgbot.Bot, update *models.Update) { ... }
   }
   ```
-- `DefaultHandler(svc)` routes non-command messages to active conversation flows via `HandleConversation`
+- `ConversationHandler(svc)` routes non-command messages to active conversation flows via `HandleConversation`
 
 ## Multi-Step Conversation Flows {#conversations}
 
 - Per-user state stored in `internal/telegram/state.go` — in-memory `map[int64]*T` protected by `sync.Mutex`
 - State structs hold the current step (enum) and any data accumulated across messages
-- Steps are handled inside `HandleConversation`, branching on `s.step`
+- Steps are handled inside `HandleRegisterConversation`, branching on `s.step`
 - Always call `setState(userID, nil)` to clear state on both success and terminal failure
 
 ## Markdown Formatting {#markdown}

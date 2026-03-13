@@ -1,4 +1,4 @@
-package telegram
+package addprompt
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
+	"github.com/selfdeceited/tg-gmail-parser-bot/internal/telegram/handlers"
 )
 
 // AddPromptHandler handles /addprompt — starts the new-prompt conversation flow.
@@ -25,7 +26,7 @@ func AddPromptHandler(svc service.PromptService) tgbot.HandlerFunc {
 // startAddPromptFlow initialises the addPrompt state and asks for the sender filter.
 // editID is nil for new prompts, non-nil when editing an existing one.
 func startAddPromptFlow(ctx context.Context, bot *tgbot.Bot, userID, chatID int64, editID *uuid.UUID) {
-	setAddPromptState(userID, &addPromptState{step: stepAddPromptWaitFilter, editID: editID})
+	setAddPromptState(userID, &addPromptState{step: stepWaitFilter, editID: editID})
 	_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 		ChatID:    chatID,
 		Text:      "*Step 1/2* — Enter the sender filter \\(e\\.g\\. `newsletter@example\\.com`\\), or press the button below to match all senders\\.",
@@ -57,30 +58,30 @@ func HandleAddPromptConversation(svc service.PromptService) tgbot.HandlerFunc {
 		text := strings.TrimSpace(update.Message.Text)
 
 		switch s.step {
-		case stepAddPromptWaitFilter:
+		case stepWaitFilter:
 			filter := text
 			if filter == "-" {
 				filter = ""
 			}
 			s.filter = filter
-			s.step = stepAddPromptWaitPrompt
+			s.step = stepWaitPrompt
 			setAddPromptState(userID, s)
-			sendText(ctx, bot, chatID, "*Step 2/2* — Enter the summarization prompt text\\.")
+			handlers.SendText(ctx, bot, chatID, "*Step 2/2* — Enter the summarization prompt text\\.")
 
-		case stepAddPromptWaitPrompt:
+		case stepWaitPrompt:
 			if text == "" {
-				sendText(ctx, bot, chatID, "Prompt text cannot be empty\\. Please enter a prompt\\.")
+				handlers.SendText(ctx, bot, chatID, "Prompt text cannot be empty\\. Please enter a prompt\\.")
 				return
 			}
 			if err := savePrompt(ctx, svc, userID, s, text); err != nil {
 				logrus.WithError(err).WithField("user_id", userID).Error("addprompt: failed to save prompt")
-				sendText(ctx, bot, chatID, "Failed to save prompt\\. Please try again\\.")
+				handlers.SendText(ctx, bot, chatID, "Failed to save prompt\\. Please try again\\.")
 				return
 			}
 			setAddPromptState(userID, nil)
 			logrus.WithField("user_id", userID).Info("addprompt: prompt saved")
-			sendText(ctx, bot, chatID, "✅ Prompt saved\\!")
-			sendPromptList(ctx, bot, svc, userID, chatID)
+			handlers.SendText(ctx, bot, chatID, "✅ Prompt saved\\!")
+			handlers.SendPromptList(ctx, bot, svc, userID, chatID)
 		}
 	}
 }
@@ -105,11 +106,11 @@ func EditPromptCallback(svc service.PromptService) tgbot.HandlerFunc {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("editprompt: invalid uuid in callback")
-			answerCallback(ctx, bot, update.CallbackQuery.ID)
+			handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
 			return
 		}
 
-		answerCallback(ctx, bot, update.CallbackQuery.ID)
+		handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
 		startAddPromptFlow(ctx, bot, userID, chatID, &id)
 	}
 }
@@ -127,25 +128,25 @@ func RemovePromptCallback(svc service.PromptService) tgbot.HandlerFunc {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("removeprompt: invalid uuid in callback")
-			answerCallback(ctx, bot, update.CallbackQuery.ID)
+			handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
 			return
 		}
 
 		if err := svc.DeletePrompt(ctx, id); err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("removeprompt: failed to delete")
-			answerCallback(ctx, bot, update.CallbackQuery.ID)
-			sendText(ctx, bot, chatID, "Failed to remove prompt\\. Please try again\\.")
+			handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
+			handlers.SendText(ctx, bot, chatID, "Failed to remove prompt\\. Please try again\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("removeprompt: prompt deleted")
-		answerCallback(ctx, bot, update.CallbackQuery.ID)
-		sendText(ctx, bot, chatID, "🗑 Prompt removed\\.")
-		sendPromptList(ctx, bot, svc, userID, chatID)
+		handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
+		handlers.SendText(ctx, bot, chatID, "🗑 Prompt removed\\.")
+		handlers.SendPromptList(ctx, bot, svc, userID, chatID)
 	}
 }
 
-// AddPromptNoFilterCallback handles the "📭 No sender filter" inline button (callback: "addprompt:nofilter").
+// AddPromptNoFilterCallback handles the "📭 No sender filter" inline button.
 func AddPromptNoFilterCallback(svc service.PromptService) tgbot.HandlerFunc {
 	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.CallbackQuery == nil {
@@ -153,20 +154,20 @@ func AddPromptNoFilterCallback(svc service.PromptService) tgbot.HandlerFunc {
 		}
 		userID := update.CallbackQuery.From.ID
 		chatID := update.CallbackQuery.Message.Message.Chat.ID
-		answerCallback(ctx, bot, update.CallbackQuery.ID)
+		handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
 
 		s := getAddPromptState(userID)
-		if s == nil || s.step != stepAddPromptWaitFilter {
+		if s == nil || s.step != stepWaitFilter {
 			return
 		}
 		s.filter = ""
-		s.step = stepAddPromptWaitPrompt
+		s.step = stepWaitPrompt
 		setAddPromptState(userID, s)
-		sendText(ctx, bot, chatID, "*Step 2/2* — Enter the summarization prompt text\\.")
+		handlers.SendText(ctx, bot, chatID, "*Step 2/2* — Enter the summarization prompt text\\.")
 	}
 }
 
-// AddPromptNewCallback handles the "➕ Add new" inline button (callback: "addprompt:new").
+// AddPromptNewCallback handles the "➕ Add new" inline button.
 func AddPromptNewCallback(svc service.PromptService) tgbot.HandlerFunc {
 	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.CallbackQuery == nil {
@@ -174,14 +175,7 @@ func AddPromptNewCallback(svc service.PromptService) tgbot.HandlerFunc {
 		}
 		userID := update.CallbackQuery.From.ID
 		chatID := update.CallbackQuery.Message.Message.Chat.ID
-		answerCallback(ctx, bot, update.CallbackQuery.ID)
+		handlers.AnswerCallback(ctx, bot, update.CallbackQuery.ID)
 		startAddPromptFlow(ctx, bot, userID, chatID, nil)
-	}
-}
-
-func answerCallback(ctx context.Context, bot *tgbot.Bot, callbackID string) {
-	_, err := bot.AnswerCallbackQuery(ctx, &tgbot.AnswerCallbackQueryParams{CallbackQueryID: callbackID})
-	if err != nil {
-		logrus.WithError(err).Error("failed to answer callback query")
 	}
 }

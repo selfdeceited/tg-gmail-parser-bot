@@ -1,4 +1,4 @@
-package telegram
+package register
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/gmail"
 	"github.com/selfdeceited/tg-gmail-parser-bot/internal/service"
+	"github.com/selfdeceited/tg-gmail-parser-bot/internal/telegram/handlers"
 )
 
-// RegisterHandler handles the /register command (step 1: ask for credentials.json).
-func RegisterHandler(svc service.RegistrationService) tgbot.HandlerFunc {
+// RegisterConversationHandler handles the /register command (step 1: ask for credentials.json).
+func RegisterConversationHandler(svc service.RegistrationService) tgbot.HandlerFunc {
 	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
-
 		if update.Message == nil {
 			return
 		}
@@ -38,12 +38,12 @@ func RegisterHandler(svc service.RegistrationService) tgbot.HandlerFunc {
 		}
 
 		setState(userID, &registerState{step: stepWaitCredentials})
-		sendText(ctx, bot, chatID, registerGuideMessage)
+		handlers.SendText(ctx, bot, chatID, registerGuideMessage)
 	}
 }
 
-// HandleConversation routes non-command messages to active conversation flows.
-func HandleConversation(svc service.RegistrationService) tgbot.HandlerFunc {
+// HandleRegisterConversation routes non-command messages for users inside the register flow.
+func HandleRegisterConversation(svc service.RegistrationService) tgbot.HandlerFunc {
 	return func(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 		if update.Message == nil || update.Message.From == nil {
 			return
@@ -69,7 +69,7 @@ func handleCredentialsPaste(ctx context.Context, bot *tgbot.Bot, update *models.
 
 	cfg, err := gmail.ParseCredentials([]byte(raw))
 	if err != nil {
-		sendText(ctx, bot, chatID, "❌ Could not parse credentials\\.json: "+escapeMarkdown(err.Error())+"\n\nPlease paste the full contents of your credentials\\.json file\\.")
+		handlers.SendText(ctx, bot, chatID, "❌ Could not parse credentials\\.json: "+handlers.EscapeMarkdown(err.Error())+"\n\nPlease paste the full contents of your credentials\\.json file\\.")
 		return
 	}
 
@@ -78,11 +78,11 @@ func handleCredentialsPaste(ctx context.Context, bot *tgbot.Bot, update *models.
 	s.step = stepWaitAuthCode
 	setState(userID, s)
 
-	sendText(ctx, bot, chatID,
+	handlers.SendText(ctx, bot, chatID,
 		"✅ Credentials parsed\\.\n\n"+
 			"*Step 2 — Authorize Gmail access*\n\n"+
 			"Visit the link below, sign in with your Google account, and paste the authorization code here:\n\n"+
-			"`"+escapeMarkdown(authURL)+"`",
+			"`"+handlers.EscapeMarkdown(authURL)+"`",
 	)
 }
 
@@ -92,14 +92,14 @@ func handleAuthCodePaste(ctx context.Context, bot *tgbot.Bot, update *models.Upd
 
 	refreshToken, err := gmail.ExchangeCode(ctx, s.oauthConfig, code)
 	if err != nil {
-		sendText(ctx, bot, chatID, "❌ Failed to exchange authorization code: "+escapeMarkdown(err.Error())+"\n\nPlease run /register again\\.")
+		handlers.SendText(ctx, bot, chatID, "❌ Failed to exchange authorization code: "+handlers.EscapeMarkdown(err.Error())+"\n\nPlease run /register again\\.")
 		setState(userID, nil)
 		return
 	}
 
 	if err := gmail.SmokeTest(ctx, s.oauthConfig, refreshToken); err != nil {
 		logrus.WithError(err).WithField("user_id", userID).Error("register: gmail smoke test failed")
-		sendText(ctx, bot, chatID, "❌ Credentials are invalid or Gmail access was not granted\\. Please run /register again\\.")
+		handlers.SendText(ctx, bot, chatID, "❌ Credentials are invalid or Gmail access was not granted\\. Please run /register again\\.")
 		setState(userID, nil)
 		return
 	}
@@ -107,7 +107,7 @@ func handleAuthCodePaste(ctx context.Context, bot *tgbot.Bot, update *models.Upd
 
 	if err := svc.SaveCredentials(ctx, userID, s.oauthConfig.ClientID, s.oauthConfig.ClientSecret, refreshToken); err != nil {
 		logrus.WithError(err).WithField("user_id", userID).Error("register: failed to save credentials")
-		sendText(ctx, bot, chatID, "❌ Internal error saving credentials\\. Please try again later\\.")
+		handlers.SendText(ctx, bot, chatID, "❌ Internal error saving credentials\\. Please try again later\\.")
 		setState(userID, nil)
 		return
 	}

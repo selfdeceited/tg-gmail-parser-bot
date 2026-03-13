@@ -1,4 +1,4 @@
-package telegram
+package handlers
 
 import (
 	"context"
@@ -22,17 +22,17 @@ func ClearRegistrationHandler(svc service.RegistrationService) tgbot.HandlerFunc
 
 		if err := svc.ClearCredentials(ctx, userID); err != nil {
 			logrus.WithError(err).WithField("user_id", userID).Error("ClearRegistrationHandler: failed to clear credentials")
-			sendText(ctx, bot, chatID, "Failed to clear registration data\\. Please try again later\\.")
+			SendText(ctx, bot, chatID, "Failed to clear registration data\\. Please try again later\\.")
 			return
 		}
 
 		logrus.WithField("user_id", userID).Info("ClearRegistrationHandler: credentials cleared")
-		sendText(ctx, bot, chatID, "Registration cleared\\. Your Gmail credentials have been deleted\\.")
+		SendText(ctx, bot, chatID, "Registration cleared\\. Your Gmail credentials have been deleted\\.")
 
 		// Re-show the setup guide so the user knows how to register again.
 		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
-			Text:      startMessage,
+			Text:      StartMessage,
 			ParseMode: models.ParseModeMarkdown,
 		})
 		if err != nil {

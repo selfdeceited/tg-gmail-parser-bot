@@ -1,4 +1,4 @@
-package telegram
+package handlers
 
 import (
 	"context"
@@ -19,18 +19,18 @@ func ConfigureCommandHandler(promptSvc service.PromptService, regSvc service.Reg
 		}
 		userID := update.Message.From.ID
 		chatID := update.Message.Chat.ID
-		sendAccountSettings(ctx, bot, regSvc, userID, chatID)
-		sendPromptList(ctx, bot, promptSvc, userID, chatID)
+		SendAccountSettings(ctx, bot, regSvc, userID, chatID)
+		SendPromptList(ctx, bot, promptSvc, userID, chatID)
 	}
 }
 
-// sendPromptList fetches and displays the current prompt list for a user.
-// Shared by ConfigureCommandHandler and post-edit/delete refresh.
-func sendPromptList(ctx context.Context, bot *tgbot.Bot, svc service.PromptService, userID, chatID int64) {
+// SendPromptList fetches and displays the current prompt list for a user.
+// Exported so the addprompt package can refresh the list after edits.
+func SendPromptList(ctx context.Context, bot *tgbot.Bot, svc service.PromptService, userID, chatID int64) {
 	prompts, err := svc.ListPrompts(ctx, userID)
 	if err != nil {
 		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to list prompts")
-		sendText(ctx, bot, chatID, "Failed to load prompts\\. Please try again\\.")
+		SendText(ctx, bot, chatID, "Failed to load prompts\\. Please try again\\.")
 		return
 	}
 
@@ -54,9 +54,9 @@ func sendPromptList(ctx context.Context, bot *tgbot.Bot, svc service.PromptServi
 	for _, p := range prompts {
 		filterLine := "_none_"
 		if p.Filter != "" {
-			filterLine = escapeMarkdown(p.Filter)
+			filterLine = EscapeMarkdown(p.Filter)
 		}
-		text := fmt.Sprintf("📌 *Filter:* %s\n💬 %s", filterLine, escapeMarkdown(p.Prompt))
+		text := fmt.Sprintf("📌 *Filter:* %s\n💬 %s", filterLine, EscapeMarkdown(p.Prompt))
 		idStr := p.ID.String()
 		_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID:    chatID,
@@ -88,5 +88,30 @@ func sendPromptList(ctx context.Context, bot *tgbot.Bot, svc service.PromptServi
 	})
 	if err != nil {
 		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to send footer message")
+	}
+}
+
+// SendAccountSettings sends the Gmail account index card with a change button.
+// Exported so the gmailaccount package can refresh it after an update.
+func SendAccountSettings(ctx context.Context, bot *tgbot.Bot, svc service.RegistrationService, userID, chatID int64) {
+	index, err := svc.GetGmailAccountIndex(ctx, userID)
+	if err != nil {
+		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to get gmail account index")
+		return
+	}
+
+	text := fmt.Sprintf("🔗 *Gmail account index:* `%d`\nLinks will open `mail\\.google\\.com/mail/u/%d/`", index, index)
+	_, err = bot.SendMessage(ctx, &tgbot.SendMessageParams{
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: models.ParseModeMarkdown,
+		ReplyMarkup: &models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{
+				{{Text: "✏️ Change account index", CallbackData: "gmailaccount:set"}},
+			},
+		},
+	})
+	if err != nil {
+		logrus.WithError(err).WithField("user_id", userID).Error("configure: failed to send account settings")
 	}
 }

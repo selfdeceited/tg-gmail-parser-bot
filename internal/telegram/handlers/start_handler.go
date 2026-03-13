@@ -1,4 +1,4 @@
-package telegram
+package handlers
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func StartHandler(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 
 	_, err := bot.SendMessage(ctx, &tgbot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
-		Text:      startMessage,
+		Text:      StartMessage,
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
@@ -28,11 +28,8 @@ func StartHandler(ctx context.Context, bot *tgbot.Bot, update *models.Update) {
 	logrus.WithField("user_id", update.Message.From.ID).Info("StartHandler: completed")
 }
 
-// <!-- REVIEW: spec://common/main#formatting says "Markdown parse mode" but
-// ParseModeMarkdown (legacy) is deprecated in the Bot API and fails on special
-// characters. Using ParseModeMarkdownV2 instead. -->
-
-const startMessage = `*Welcome to tg\-gmail\-parser\-bot\!* 👋
+// StartMessage is exported so clearregistration_handler can re-send it.
+const StartMessage = `*Welcome to tg\-gmail\-parser\-bot\!* 👋
 
 This bot monitors your Gmail inbox and forwards parsed email summaries to Telegram\.
 

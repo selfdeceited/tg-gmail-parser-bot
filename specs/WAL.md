@@ -17,36 +17,18 @@ _(none)_
 - [2026-03-07] bot server + /start handler + /register stub (spec://modules/config#start)
 - [2026-03-07] handlers split into per-file convention; documented in BOOT.md
 - [2026-03-08] /register + configure button handler (spec://config/config#register)
-  - `internal/telegram/state.go` — per-user in-memory conversation state machine
-  - `internal/gmail/oauth.go` — ParseCredentials, BuildAuthURL, ExchangeCode (OOB redirect)
-  - `internal/gmail/smoketest.go` — SmokeTest + VerifyRefreshToken (reads last email via Gmail API)
-  - `internal/telegram/register.go` — 3-step flow + double-registration guard w/ live smoke test; clears stale creds
-  - `internal/telegram/configure.go` — ConfigureButtonHandler: live smoke test; clearRegistration helper
-  - `internal/telegram/handlers.go` — wired DB; DefaultHandler routes to HandleConversation; registered "⚙️ Configure"
-  - `cmd/bot/main.go` — passes db to RegisterHandlers and DefaultHandler
-  - Credential storage redesigned: single `EncryptedCredentials` JSON blob (client_id + client_secret + refresh_token)
-  - `internal/db/entities/credential.go` — renamed EncryptedRefreshToken → EncryptedCredentials
-  - `internal/db/commands/credential.go` — UpsertCredentials (JSON marshal + encrypt)
-  - `internal/db/queries/credential.go` — GetCredentials (decrypt + unmarshal → StoredCredentials)
-  - New deps: golang.org/x/oauth2, google.golang.org/api/gmail/v1, github.com/sirupsen/logrus
-  - All logging migrated to logrus; success events logged at Info with structured fields
 - [2026-03-09] /watch feature (spec://config/telegram#watch)
-  - `internal/db/entities/user.go` — added IsWatching, WatchChatID, LastCheckedAt columns
-  - `internal/db/commands/user.go` — SetWatching, UpdateLastChecked; fixed UpsertUser never being called during registration
-  - `internal/db/queries/user.go` — GetWatchingUsers
-  - `internal/gmail/reader.go` — EmailMessage, NewGmailService, FetchNewMessages (after: query + text/plain extraction)
-  - `internal/claude/summarize.go` — Claude Haiku client, prompt augmentation, JSON response parsing
-  - `internal/service/watch.go` — WatchService: per-user goroutines, 300s ticker, sender-filter routing, RestoreAll for startup resume
-  - `internal/telegram/watch_handler.go` — /watch toggle handler, MakeBotSendFunc
-  - `cmd/bot/main.go` — CLAUDE_API_KEY validation, WatchService init, RestoreAll on startup, /watch in command list
-  - New dep: github.com/anthropics/anthropic-sdk-go v1.26.0
 - [2026-03-07] persistence layer (spec://modules/db)
-  - `internal/db/db.go` — Connect(), AutoMigrate
-  - `internal/db/crypto.go` — EncryptToken/DecryptToken (AES-256-GCM, TOKEN_ENCRYPTION_KEY env var)
-  - `internal/db/entities/` — User (int64 PK), Prompt (UUID PK, soft delete), Credential (UUID PK, uniqueIndex user_id)
-  - `internal/db/queries/` — GetUser, GetActivePrompts, GetRefreshToken
-  - `internal/db/commands/` — UpsertUser, SetRegistered, SetActive, AddPrompt, DeletePrompt, UpsertRefreshToken, DeleteCredential
-  - `.env.example` — added TOKEN_ENCRYPTION_KEY example
+- [2026-03-13] configurable Gmail account index (`GmailAccountIndex` on User entity; `/configure` UI with inline button flow; `SetGmailAccountIndex` command + service method; threaded through `FetchNewMessages` and watch poll)
+- [2026-03-13] CI/CD: bumped GitHub Actions to latest versions; added Dependabot config (gomod, docker, github-actions weekly)
+- [2026-03-13] services wiring refactored into `cmd/bot/services.go` (`services` struct + `wireServices`); convention documented in `specs/common/conventions.md`
+- [2026-03-13] `StartBot` moved to `internal/telegram/setup.go` (package `telegram`)
+- [2026-03-13] handlers restructured into `internal/telegram/handlers/` subfolder:
+  - `handlers/` (package `handlers`) — helpers.go, start_handler.go, clearregistration_handler.go, watch_handler.go, configure_handler.go
+  - `handlers/register/` — register_handler.go, register_state.go
+  - `handlers/addprompt/` — addprompt_handler.go, addprompt_state.go
+  - `handlers/gmailaccount/` — gmailaccount_handler.go, gmailaccount_state.go
+  - `internal/telegram/setup.go` (renamed from handlers.go) — RegisterHandlers, DefaultHandler, StartBot
 
 ## Known Issues
 
