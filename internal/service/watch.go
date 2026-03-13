@@ -18,6 +18,7 @@ import (
 )
 
 const pollInterval = 120 * time.Second
+const pollTimeout = 15 * time.Second
 
 // SendFunc delivers a formatted message to a Telegram chat.
 type SendFunc func(chatID int64, msg string)
@@ -33,6 +34,9 @@ type WatchService interface {
 	// RestoreAll resumes watchers for all users flagged is_watching=true in DB.
 	// Called once on server startup.
 	RestoreAll(ctx context.Context, send SendFunc) error
+	// Wait blocks until all poller goroutines have exited.
+	// Call after the root context is cancelled for a clean shutdown.
+	Wait()
 }
 
 type watchService struct {
@@ -42,6 +46,7 @@ type watchService struct {
 
 	mu      sync.Mutex
 	cancels map[int64]context.CancelFunc
+	wg      sync.WaitGroup
 }
 
 // NewWatchService returns a WatchService backed by the given DB and Claude client.
@@ -69,6 +74,7 @@ func (s *watchService) Start(ctx context.Context, userID int64, chatID int64, se
 	s.cancels[userID] = cancel
 	s.mu.Unlock()
 
+	s.wg.Add(1)
 	go s.runLoop(watchCtx, userID, chatID, send)
 	logrus.WithFields(logrus.Fields{"user_id": userID, "chat_id": chatID}).Info("watch: started")
 	return nil
@@ -97,6 +103,10 @@ func (s *watchService) IsWatching(userID int64) bool {
 	return ok
 }
 
+func (s *watchService) Wait() {
+	s.wg.Wait()
+}
+
 func (s *watchService) RestoreAll(ctx context.Context, send SendFunc) error {
 	users, err := queries.GetWatchingUsers(s.db)
 	if err != nil {
@@ -113,6 +123,7 @@ func (s *watchService) RestoreAll(ctx context.Context, send SendFunc) error {
 }
 
 func (s *watchService) runLoop(ctx context.Context, userID int64, chatID int64, send SendFunc) {
+	defer s.wg.Done()
 	log := logrus.WithFields(logrus.Fields{"user_id": userID, "chat_id": chatID})
 
 	since := s.loadLastChecked(userID)
@@ -129,7 +140,10 @@ func (s *watchService) runLoop(ctx context.Context, userID int64, chatID int64, 
 		case <-ticker.C:
 			now := time.Now().UTC()
 			log.WithField("since", since).Info("watch: polling Gmail")
-			if err := s.poll(ctx, userID, chatID, since, send, log); err != nil {
+			pollCtx, pollCancel := context.WithTimeout(ctx, pollTimeout)
+			err := s.poll(pollCtx, userID, chatID, since, send, log)
+			pollCancel()
+			if err != nil {
 				log.WithError(err).Error("watch: poll failed, last_checked_at not advanced")
 			} else {
 				since = now
@@ -190,7 +204,11 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 	}
 
 	for _, email := range emails {
-		s.processEmail(ioCtx, userID, chatID, email, prompts, send, log)
+		if ctx.Err() != nil {
+			log.WithError(ctx.Err()).Warn("watch: poll context expired, stopping email processing")
+			break
+		}
+		s.processEmail(ctx, userID, chatID, email, prompts, send, log)
 	}
 	return nil
 }

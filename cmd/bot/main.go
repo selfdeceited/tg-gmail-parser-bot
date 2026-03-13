@@ -43,4 +43,8 @@ func main() {
 	}
 
 	telegram.StartBot(ctx, bot)
+
+	logrus.Info("shutdown: waiting for poller goroutines to exit")
+	svc.watchService.Wait()
+	logrus.Info("shutdown: complete")
 }
