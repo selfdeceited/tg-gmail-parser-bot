@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.26.0
-	github.com/go-telegram/bot v1.19.0
+	github.com/go-telegram/bot v1.20.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/sirupsen/logrus v1.9.4
