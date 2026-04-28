@@ -195,12 +195,6 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 	}
 	accountIndex := user.GmailAccountIndex
 
-	emails, err := gmail.FetchNewMessages(ioCtx, gmailService, since, accountIndex)
-	if err != nil {
-		log.WithError(err).Error("watch: failed to fetch messages")
-		return err
-	}
-
 	prompts, err := queries.GetActivePrompts(db, userID)
 	if err != nil {
 		log.WithError(err).Error("watch: failed to load prompts")
@@ -209,6 +203,12 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 	if len(prompts) == 0 {
 		log.Info("watch: no prompts configured, skipping")
 		return nil
+	}
+
+	emails, err := gmail.FetchNewMessages(ioCtx, gmailService, since, accountIndex)
+	if err != nil {
+		log.WithError(err).Error("watch: failed to fetch messages")
+		return err
 	}
 
 	for _, email := range emails {
