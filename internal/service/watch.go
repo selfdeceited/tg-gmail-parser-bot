@@ -20,6 +20,7 @@ import (
 
 const pollInterval = 120 * time.Second
 const pollTimeout = 15 * time.Second
+const claudeTimeout = 60 * time.Second
 
 // SendFunc delivers a formatted message to a Telegram chat.
 type SendFunc func(chatID int64, msg string)
@@ -144,7 +145,7 @@ func (s *watchService) runLoop(ctx context.Context, userID int64, chatID int64, 
 			now := time.Now().UTC()
 			log.WithField("since", since).Info("watch: polling Gmail")
 			pollCtx, pollCancel := context.WithTimeout(ctx, pollTimeout)
-			err := s.poll(pollCtx, userID, chatID, since, send, log)
+			err := s.poll(pollCtx, ctx, userID, chatID, since, send, log)
 			pollCancel()
 			if err != nil {
 				log.WithError(err).Error("watch: poll failed, last_checked_at not advanced")
@@ -170,7 +171,7 @@ func (s *watchService) loadLastChecked(userID int64, log *logrus.Entry) time.Tim
 	return *user.LastCheckedAt
 }
 
-func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, since time.Time, send SendFunc, log *logrus.Entry) error {
+func (s *watchService) poll(ctx context.Context, watchCtx context.Context, userID int64, chatID int64, since time.Time, send SendFunc, log *logrus.Entry) error {
 	ioCtx, cancel := context.WithTimeout(ctx, s.ioTimeout)
 	defer cancel()
 
@@ -216,7 +217,7 @@ func (s *watchService) poll(ctx context.Context, userID int64, chatID int64, sin
 			log.WithError(ctx.Err()).Warn("watch: poll context expired, stopping email processing")
 			break
 		}
-		s.processEmail(ctx, userID, chatID, email, prompts, send, log)
+		s.processEmail(watchCtx, userID, chatID, email, prompts, send, log)
 	}
 	return nil
 }
@@ -238,7 +239,9 @@ func (s *watchService) processEmail(ctx context.Context, userID int64, chatID in
 			"prompt_id": p.ID,
 			"email_URL": email.URL,
 		})
-		result, err := s.claude.Summarize(ctx, p.Prompt, email)
+		claudeCtx, claudeCancel := context.WithTimeout(ctx, claudeTimeout)
+		result, err := s.claude.Summarize(claudeCtx, p.Prompt, email)
+		claudeCancel()
 		if err != nil {
 			log.WithError(err).Error("watch: claude summarization failed, skipping prompt")
 			continue
